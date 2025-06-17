@@ -1,0 +1,53 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "ES2023",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+
+    "module": "NodeNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnusedLabels": false,
+    "declaration": true,
+    "declarationMap": true,
+    "types": ["vitest/globals"],
+    "lib": ["ES2023"]
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "vitest.config.ts",
+    "vitest.config.d.ts",
+    "vitest.config.d.ts.map",
+    "vitest.config.js",
+    "vitest.config.js.map",
+    "vitest.global-setup.ts",
+    "vitest.global-setup.d.ts",
+    "vitest.global-setup.d.ts.map",
+    "vitest.global-setup.js",
+    "vitest.global-setup.js.map",
+    "integration.vitest.config.ts",
+    "integration.vitest.config.d.ts",
+    "integration.vitest.config.d.ts.map",
+    "integration.vitest.config.js",
+    "integration.vitest.config.js.map",
+    "**/*.test.ts",
+    "**/test"
+  ]
+}

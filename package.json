@@ -1,0 +1,71 @@
+{
+  "name": "@nulledexp/typeorm-mysql-criteria-translator",
+  "version": "0.1.0",
+  "description": "TypeORM MySQL translator for @nulledexp/translatable-criteria",
+  "keywords": [
+    "criteria",
+    "query",
+    "translator",
+    "typeorm",
+    "mysql",
+    "database",
+    "translatable-criteria"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "rimraf ./dist && tsc",
+    "ci": "npm run check-circular && npm run check-format && npm run check-exports && npm run test",
+    "test": "vitest --config integration.vitest.config.ts run",
+    "format": "prettier --write .",
+    "docker": "docker compose up",
+    "build-watch": "tsc --watch",
+    "dev": "vitest --config integration.vitest.config.ts",
+    "check-exports": "attw --pack . --ignore-rules=cjs-resolves-to-esm",
+    "check-format": "prettier --check .",
+    "check-circular": "npx madge --circular --extensions ts ./src",
+    "local-release": "changeset version && changeset publish",
+    "prepublishOnly": "npm run build && npm run test"
+  },
+  "peerDependencies": {
+    "@nulledexp/translatable-criteria": "^1.0.3",
+    "typeorm": "^0.3.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
+    "@changesets/cli": "^2.29.4",
+    "@nulledexp/translatable-criteria": "^1.0.3",
+    "@types/node": "^24.0.0",
+    "@types/uuid": "^10.0.0",
+    "dotenv": "^16.5.0",
+    "madge": "^7.0.0",
+    "mysql2": "^3.14.1",
+    "prettier": "^3.5.3",
+    "rimraf": "^6.0.1",
+    "ts-unused-exports": "^11.0.1",
+    "tsx": "^4.20.1",
+    "typeorm": "^0.3.24",
+    "typescript": "^5.8.3",
+    "uuid": "^11.1.0",
+    "vitest": "^3.2.3"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Nelson Cabrera <contact@nelsoncabrera.dev>",
+  "homepage": "https://github.com/Techscq/typeorm-mysql-criteria-translator",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Techscq/typeorm-mysql-criteria-translator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Techscq/typeorm-mysql-criteria-translator/issues"
+  }
+}
