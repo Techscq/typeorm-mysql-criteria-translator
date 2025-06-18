@@ -120,14 +120,13 @@ export async function seedDatabaseService() {
   return allFakeData;
 }
 
-// C:/Users/Nulled/WebstormProjects/repository-criteria/src/criteria/translator/infrastructure/type-orm/test/type-orm.utils.ts
 export async function teardownDataSourceService() {
   if (AppDataSource && AppDataSource.isInitialized) {
-    console.log('Attempting to destroy AppDataSource...'); // Log para depuración
+    console.log('Attempting to destroy AppDataSource...');
     await AppDataSource.destroy();
-    console.log('AppDataSource destroyed successfully.'); // Log para depuración
+    console.log('AppDataSource destroyed successfully.');
   } else {
-    console.log('AppDataSource not initialized or already destroyed.'); // Log para depuración
+    console.log('AppDataSource not initialized or already destroyed.');
   }
 }
 

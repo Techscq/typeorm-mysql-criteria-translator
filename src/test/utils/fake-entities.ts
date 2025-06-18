@@ -41,7 +41,6 @@ export interface Post extends EntityBase {
   publisher: User;
   comments: Comment[];
   categories: string[] | null;
-  // Campo para pruebas JSON/Array
   metadata?: {
     tags?: string[];
     views?: number;
@@ -61,7 +60,7 @@ export const PostSchema = GetTypedCriteriaSchema({
     'user_uuid',
     'created_at',
     'metadata',
-  ], // Añadir metadata
+  ],
   joins: [
     { alias: 'comments', join_relation_type: 'one_to_many' },
     { alias: 'publisher', join_relation_type: 'many_to_one' },
@@ -154,18 +153,17 @@ export type RecursiveObjectValueTypes<T> = {
 export type EventType = RecursiveObjectValueTypes<typeof EventType>;
 
 export interface DomainEvent<T extends { [key: string]: any }> {
-  // Renombrado para evitar colisión
-  readonly id?: number; // Autogenerado por la DB
+  readonly id?: number;
   readonly event_type: EventType;
   readonly event_body: T;
   readonly event_version: number;
-  readonly occurred_on: string; // Usaremos generateSequentialCreatedAt
-  direct_tags?: string[] | null; // NUEVO CAMPO
+  readonly occurred_on: string;
+  direct_tags?: string[] | null;
 }
 
 export const DomainEventsSchema = GetTypedCriteriaSchema({
-  source_name: 'event', // Nombre de la tabla en la DB
-  alias: ['event', 'events'], // Alias para usar en Criteria
+  source_name: 'event',
+  alias: ['event', 'events'],
   fields: [
     'id',
     'event_type',
@@ -258,7 +256,6 @@ export function generateFakeData() {
       comments: [],
       categories: i % 3 === 0 ? ['tech', 'news', 'typeorm'] : null,
       created_at: generateSequentialCreatedAt(7),
-      // Añadir metadata a algunos posts
       metadata:
         i % 4 === 0
           ? {
@@ -269,7 +266,7 @@ export function generateFakeData() {
             }
           : i % 4 === 1
             ? {
-                tags: [], // <<-- ARRAY VACÍO AQUÍ
+                tags: [],
                 views: i * 50,
                 extra: { source: 'manual' },
               }
@@ -308,13 +305,11 @@ export function generateFakeData() {
     }
   });
 
-  // --- Generación de DomainEvents ---
   const domainEventsData: DomainEvent<any>[] = [];
 
-  // Evento para creación de usuario
   if (usersData[0]) {
     domainEventsData.push({
-      event_type: EventType.User.Email.Changed, // Usando un tipo de evento existente
+      event_type: EventType.User.Email.Changed,
       event_body: {
         user_uuid: usersData[0].uuid,
         old_email: 'old@example.com',
@@ -332,7 +327,6 @@ export function generateFakeData() {
     });
   }
 
-  // Evento para creación de post
   if (postsData[0]) {
     domainEventsData.push({
       event_type: EventType.Post.WasCreated,
@@ -343,7 +337,7 @@ export function generateFakeData() {
         categories: ['tech', 'news', 'typeorm'],
         status: 'published',
         content_length: postsData[0].body.length,
-        metadata: postsData[0].metadata, // Incluir metadata del post
+        metadata: postsData[0].metadata,
         tags: [],
       },
       event_version: 1,
@@ -369,7 +363,7 @@ export function generateFakeData() {
       direct_tags: null,
     });
   }
-  // Evento con un array simple en el body
+
   domainEventsData.push({
     event_type: EventType.User.Permission.Changed,
     event_body: {
@@ -382,7 +376,7 @@ export function generateFakeData() {
     occurred_on: generateSequentialCreatedAt(1),
     direct_tags: ['permission', 'user_event'],
   });
-  // Evento con un valor nulo y booleano
+
   domainEventsData.push({
     event_type: EventType.Post.WasDisabled,
     event_body: {
@@ -404,6 +398,6 @@ export function generateFakeData() {
     fakeAddresses: addressesData,
     fakePosts: postsData,
     fakeComments: allCommentsData,
-    fakeDomainEvents: domainEventsData, // Añadir al retorno
+    fakeDomainEvents: domainEventsData,
   };
 }

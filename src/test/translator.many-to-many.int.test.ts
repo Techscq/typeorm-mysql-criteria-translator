@@ -63,7 +63,7 @@ describe('TypeOrmMysqlTranslator - Many-to-Many Relationships', () => {
           permissionAlias,
         ),
         {
-          pivot_source_name: 'permission_user', // Nombre de la tabla pivote
+          pivot_source_name: 'permission_user',
           parent_field: { pivot_field: 'user_uuid', reference: 'uuid' },
           join_field: { pivot_field: 'permission_uuid', reference: 'uuid' },
         },
@@ -174,14 +174,13 @@ describe('TypeOrmMysqlTranslator - Many-to-Many Relationships', () => {
     expect(sql).toContain(
       `INNER JOIN \`user\` \`${userAlias}\` ON \`${userAlias}\`.\`uuid\`=\`${pivotTableAlias}\`.\`user_uuid\``,
     );
-    expect(sql).toContain(`AND (\`${userAlias}\`.\`username\` = ?)`); // Filtro en la entidad unida
+    expect(sql).toContain(`AND (\`${userAlias}\`.\`username\` = ?)`);
 
     expect(fetchedPermissions).toHaveLength(1);
     const fetchedPermission = fetchedPermissions[0]!;
     expect(fetchedPermission.uuid).toBe(targetPermissionFromDB.uuid);
     expect(fetchedPermission.users).toBeDefined();
-    expect(fetchedPermission.users).toHaveLength(1); // Solo el usuario filtrado
-
+    expect(fetchedPermission.users).toHaveLength(1);
     if (fetchedPermission.users && fetchedPermission.users.length > 0) {
       expect(fetchedPermission.users[0]!.uuid).toBe(expectedUserFromJoin.uuid);
       expect(fetchedPermission.users[0]!.username).toBe(

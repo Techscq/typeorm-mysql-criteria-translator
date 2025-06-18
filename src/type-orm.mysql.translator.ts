@@ -76,7 +76,6 @@ export class TypeOrmMysqlTranslator<
     if (criteria.rootFilterGroup.items.length > 0) {
       qb.where(
         new Brackets((bracketQb) => {
-          // El accept del FilterGroup llamará a visitAndGroup/visitOrGroup de este traductor
           criteria.rootFilterGroup.accept(this, criteria.alias, bracketQb);
         }),
       );

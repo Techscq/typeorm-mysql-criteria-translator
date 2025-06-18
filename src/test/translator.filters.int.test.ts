@@ -179,7 +179,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const alias = CriteriaUserSchema.alias[0];
     const patternToExclude = 'user_1%';
     const usersToExpect = actualUsersFromDB.filter(
-      (user) => !user.username.startsWith('user_1'), // Simplificado para el patrón dado
+      (user) => !user.username.startsWith('user_1'),
     );
     const usersThatMatchPattern = actualUsersFromDB.filter((user) =>
       user.username.startsWith('user_1'),
@@ -956,18 +956,13 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     });
   });
 
-  // --- Tests para el campo 'categories' (simple-array) de PostEntity ---
-  // Este describe anidado es para agrupar tests específicos del campo 'categories'
-  // que usa FIND_IN_SET y tiene un manejo particular de NULLs.
   describe('TypeOrmMysqlTranslator - Simple Array (categories) Filters', () => {
-    let allPostsFromDB: Post[]; // Usar un nombre diferente para evitar confusión con la variable del scope superior
+    let allPostsFromDB: Post[];
 
     beforeAll(async () => {
       const dataSource = await initializeDataSourceService(false);
       allPostsFromDB = await dataSource.getRepository(PostEntity).find();
     });
-
-    // translator se hereda del beforeEach del describe padre
 
     it('should translate IS_NULL for categories field', async () => {
       const alias = CriteriaPostSchema.alias[0];
