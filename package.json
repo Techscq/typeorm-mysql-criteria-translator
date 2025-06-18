@@ -30,13 +30,13 @@
     "prepublishOnly": "npm run build && npm run test"
   },
   "peerDependencies": {
-    "@nulledexp/translatable-criteria": "^1.0.3",
+    "@nulledexp/translatable-criteria": "^1.0.4",
     "typeorm": "^0.3.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
     "@changesets/cli": "^2.29.4",
-    "@nulledexp/translatable-criteria": "^1.0.3",
+    "@nulledexp/translatable-criteria": "^1.0.4",
     "@types/node": "^24.0.0",
     "@types/uuid": "^10.0.0",
     "dotenv": "^16.5.0",

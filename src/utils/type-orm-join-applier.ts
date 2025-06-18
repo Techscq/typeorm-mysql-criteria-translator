@@ -54,11 +54,22 @@ export class TypeOrmJoinApplier<T extends ObjectLiteral> {
     );
 
     this.queryStructureHelper.resolveSelects(criteria, selects);
-
-    if (parameters.parent_to_join_relation_type === 'many_to_one') {
-      selects.delete(
-        `${parameters.parent_alias}.${String(parameters.parent_field)}`,
-      );
+    //remove FK from select to avoid duplicate columns
+    switch (parameters.parent_to_join_relation_type) {
+      case 'many_to_one':
+        selects.delete(
+          `${parameters.parent_alias}.${String(parameters.parent_field)}`,
+        );
+        break;
+      case 'one_to_many':
+        selects.delete(`${joinAlias}.${String(parameters.join_field)}`);
+        break;
+      case 'one_to_one':
+        selects.delete(`${joinAlias}.${String(parameters.join_field)}`);
+        selects.delete(
+          `${parameters.parent_alias}.${String(parameters.parent_field)}`,
+        );
+        break;
     }
     criteria.orders.forEach((order) => {
       orderBy.push([joinAlias, order]);

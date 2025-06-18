@@ -68,14 +68,11 @@ export class TypeOrmFilterFragmentBuilder {
     const paramName = this.parameterManager.generateParamName();
 
     if (filter.operator === FilterOperator.SET_CONTAINS) {
-      // Para SET_CONTAINS, el campo NO debe ser NULL Y el elemento debe encontrarse.
       return {
         queryFragment: `(${fieldName} IS NOT NULL AND FIND_IN_SET(:${paramName}, ${fieldName}) > 0)`,
         parameters: { [paramName]: filter.value },
       };
     } else {
-      // FilterOperator.SET_NOT_CONTAINS
-      // Para SET_NOT_CONTAINS, es verdadero si el campo ES NULL O el elemento no se encuentra.
       return {
         queryFragment: `(${fieldName} IS NULL OR FIND_IN_SET(:${paramName}, ${fieldName}) = 0)`,
         parameters: { [paramName]: filter.value },
@@ -102,10 +99,8 @@ export class TypeOrmFilterFragmentBuilder {
             `(${extractedPath} IS NULL OR ${extractedPath} <> :${currentParamName})`,
           );
         } else {
-          // JSON_CONTAINS
           jsonConditions.push(`${extractedPath} = :${currentParamName}`);
         }
-        // ... (manejo de parámetros igual que antes)
         if (typeof val === 'object' && val !== null) {
           parameters[currentParamName] = JSON.stringify(val);
         } else {

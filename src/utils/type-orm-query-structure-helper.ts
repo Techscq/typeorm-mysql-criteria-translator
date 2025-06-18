@@ -7,14 +7,14 @@ import type {
 import {
   type CriteriaSchema,
   type FieldOfSchema,
-  type Filter,
+  Filter,
   FilterOperator,
   type ICriteriaBase,
   type IFilterExpression,
   LogicalOperator,
   type SelectedAliasOf,
   type Cursor,
-  type FilterGroup,
+  FilterGroup,
 } from '@nulledexp/translatable-criteria';
 
 export class TypeOrmQueryStructureHelper<T extends ObjectLiteral> {
@@ -98,9 +98,9 @@ export class TypeOrmQueryStructureHelper<T extends ObjectLiteral> {
   ): void {
     items.forEach((item, index) => {
       const isFirstItemInThisBracketCallback = index === 0;
-      if (!('logicalOperator' in item)) {
+      if (item instanceof Filter) {
         const { queryFragment, parameters } = this.filterFragmentBuilder.build(
-          item as Filter<string, FilterOperator>,
+          item,
           currentAlias,
         );
         this.applyConditionToQueryBuilder(
@@ -110,7 +110,7 @@ export class TypeOrmQueryStructureHelper<T extends ObjectLiteral> {
           groupLogicalOperator,
           parameters,
         );
-      } else if ('logicalOperator' in item) {
+      } else if (item instanceof FilterGroup) {
         const nestedBracket = new Brackets((subQb) => {
           if (item.logicalOperator === LogicalOperator.AND) {
             visitor.visitAndGroup(item, currentAlias, subQb);
@@ -131,12 +131,6 @@ export class TypeOrmQueryStructureHelper<T extends ObjectLiteral> {
   public buildConditionStringFromGroup(
     group: FilterGroup<any>,
     aliasForGroupItems: string,
-    // El 'visitor' aquí es conceptual. Necesitamos una forma de manejar la recursión
-    // para subgrupos sin depender directamente de la instancia del TypeOrmMysqlTranslator.
-    // Por ahora, lo simplificaremos para que la recursión la maneje internamente
-    // o asumimos que processGroupItems puede ser adaptado.
-    // Para este refactor, vamos a replicar la lógica de construcción de string
-    // que estaba en TypeOrmJoinApplier, pero dentro de este helper.
   ): { conditionString: string; parameters: ObjectLiteral } | undefined {
     if (group.items.length === 0) return undefined;
 
@@ -146,19 +140,17 @@ export class TypeOrmQueryStructureHelper<T extends ObjectLiteral> {
     const processItemRecursive = (
       item: IFilterExpression,
     ): string | undefined => {
-      if (!('logicalOperator' in item)) {
-        // Es un Filter
+      if (item instanceof Filter) {
         const { queryFragment, parameters } = this.filterFragmentBuilder.build(
-          item as Filter<string, FilterOperator>,
+          item,
           aliasForGroupItems,
         );
         Object.assign(allParams, parameters);
         return queryFragment;
-      } else {
-        // Es un FilterGroup
-        const subGroup = item as FilterGroup<any>;
+      } else if (item instanceof FilterGroup) {
+        const subGroup = item;
         const subConditions = subGroup.items
-          .map(processItemRecursive) // Llamada recursiva
+          .map(processItemRecursive)
           .filter(Boolean) as string[];
 
         if (subConditions.length === 0) return undefined;
