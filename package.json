@@ -1,6 +1,6 @@
 {
   "name": "@nulledexp/typeorm-mysql-criteria-translator",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "TypeORM MySQL translator for @nulledexp/translatable-criteria",
   "keywords": [
     "criteria",
