@@ -80,7 +80,7 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.status') = ?`,
     );
-    expect(params['param_0_json_0']).toBe('published');
+    expect(params['param_0']).toBe('published');
     expect(results.some((r) => r.id === targetEvent.id)).toBe(true);
   });
 
@@ -106,7 +106,7 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.details.ip_address') = ?`,
     );
-    expect(qb.getParameters()).toEqual({ param_0_json_0: '192.168.1.100' });
+    expect(qb.getParameters()).toEqual({ param_0: '192.168.1.100' });
     expect(results.some((r) => r.id === targetEvent.id)).toBe(true);
   });
 
@@ -125,7 +125,7 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `(JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.status') IS NULL OR JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.status') <> ?)`,
     );
-    expect(qb.getParameters()).toEqual({ param_0_json_0: valueToExclude });
+    expect(qb.getParameters()).toEqual({ param_0: valueToExclude });
     const expectedResults = actualDomainEventsFromDB.filter(
       (e) =>
         e.event_body.status === undefined ||
@@ -214,8 +214,8 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `JSON_CONTAINS(\`${criteria.alias}\`.\`event_body\`, ?, '$.added_permissions') AND JSON_CONTAINS(\`${criteria.alias}\`.\`event_body\`, ?, '$.added_permissions')`,
     );
-    expect(params['param_0_all_0']).toBe(JSON.stringify('read'));
-    expect(params['param_0_all_1']).toBe(JSON.stringify('write'));
+    expect(params['param_0']).toBe(JSON.stringify('read'));
+    expect(params['param_1']).toBe(JSON.stringify('write'));
     expect(results).toHaveLength(1);
     expect(results[0]?.id).toBe(targetEvent.id);
   });
@@ -245,8 +245,8 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `JSON_CONTAINS(\`${criteria.alias}\`.\`metadata\`, ?, '$.tags') OR JSON_CONTAINS(\`${criteria.alias}\`.\`metadata\`, ?, '$.tags')`,
     );
-    expect(params['param_0_any_0']).toBe(JSON.stringify('tag0'));
-    expect(params['param_0_any_1']).toBe(JSON.stringify('common_tag'));
+    expect(params['param_0']).toBe(JSON.stringify('tag0'));
+    expect(params['param_1']).toBe(JSON.stringify('common_tag'));
     expect(results.some((r) => r.uuid === targetPost.uuid)).toBe(true);
   });
 
@@ -280,9 +280,9 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `JSON_CONTAINS(JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.added_permissions'), ?, '$')`,
     );
-    expect(params['param_0_len']).toBe(exactArray.length);
-    expect(params['param_0_eq_el_0']).toBe(JSON.stringify(exactArray[0]));
-    expect(params['param_0_eq_el_1']).toBe(JSON.stringify(exactArray[1]));
+    expect(params['param_0']).toBe(exactArray.length);
+    expect(params['param_1']).toBe(JSON.stringify(exactArray[0]));
+    expect(params['param_2']).toBe(JSON.stringify(exactArray[1]));
     expect(results.some((r) => r.id === targetEvent.id)).toBe(true);
   });
 
@@ -305,7 +305,7 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `(JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.${nonExistentKey}') IS NULL OR JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.${nonExistentKey}') <> ?)`,
     );
-    expect(params['param_0_json_0']).toBe(someValue);
+    expect(params['param_0']).toBe(someValue);
     expect(fetchedEvents.length).toBe(expectedEventsCount);
   });
 
@@ -339,7 +339,7 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `(JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.status') IS NULL OR JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.status') <> ?)`,
     );
-    expect(params['param_0_json_0']).toBe(valueToExclude);
+    expect(params['param_0']).toBe(valueToExclude);
     expect(fetchedEvents.length).toBe(expectedEvents.length);
     expect(fetchedEvents.some((fe) => fe.id === targetEvent.id)).toBe(true);
   });
@@ -405,13 +405,7 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `JSON_LENGTH(JSON_EXTRACT(\`${criteria.alias}\`.\`event_body\`, '$.tags')) = ?`,
     );
-    const lengthParamKey = Object.keys(params).find((key) =>
-      key.endsWith('_len'),
-    );
-    expect(lengthParamKey).toBeDefined();
-    if (lengthParamKey) {
-      expect(params[lengthParamKey]).toBe(0);
-    }
+    expect(params['param_0']).toBe(0);
     expect(Object.keys(params).some((key) => key.includes('_eq_el_'))).toBe(
       false,
     );
@@ -449,13 +443,7 @@ describe('TypeOrmMysqlTranslator - JSON/Array Operators', () => {
     expect(sql).toContain(
       `JSON_LENGTH(\`${criteria.alias}\`.\`direct_tags\`) = ?`,
     );
-    const lengthParamKey = Object.keys(params).find((key) =>
-      key.endsWith('_len'),
-    );
-    expect(lengthParamKey).toBeDefined();
-    if (lengthParamKey) {
-      expect(params[lengthParamKey]).toBe(0);
-    }
+    expect(params['param_0']).toBe(0);
     expect(Object.keys(params).some((key) => key.includes('_eq_el_'))).toBe(
       false,
     );

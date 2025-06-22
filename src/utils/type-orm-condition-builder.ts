@@ -1,4 +1,9 @@
-import { Brackets, type ObjectLiteral, type SelectQueryBuilder } from 'typeorm';
+import {
+  Brackets,
+  type ObjectLiteral,
+  type SelectQueryBuilder,
+  type WhereExpressionBuilder,
+} from 'typeorm';
 import type { TypeOrmParameterManager } from './type-orm-parameter-manager.js';
 import type {
   TypeOrmConditionFragment,
@@ -171,25 +176,35 @@ export class TypeOrmConditionBuilder {
   /**
    * Applies a condition (string or Brackets) to a TypeORM QueryBuilder.
    * Determines whether to use `where`, `andWhere`, or `orWhere` based on context.
-   * @param qb The TypeORM SelectQueryBuilder.
+   * @param qb The TypeORM SelectQueryBuilder or WhereExpressionBuilder.
    * @param conditionOrBracket The condition string or Brackets object.
    * @param isFirstInThisBracket True if this is the first condition in its current bracket/group.
    * @param logicalConnector The logical operator (AND/OR) to use if not the first condition.
    * @param parameters Optional parameters for the condition.
    */
   public applyConditionToQueryBuilder(
-    qb: SelectQueryBuilder<any>,
+    qb: SelectQueryBuilder<any> | WhereExpressionBuilder,
     conditionOrBracket: string | Brackets,
     isFirstInThisBracket: boolean,
     logicalConnector: LogicalOperator,
     parameters?: ObjectLiteral,
   ): void {
-    if (isFirstInThisBracket) {
-      qb.where(conditionOrBracket, parameters);
-    } else if (logicalConnector === LogicalOperator.AND) {
-      qb.andWhere(conditionOrBracket, parameters);
+    if (conditionOrBracket instanceof Brackets) {
+      if (isFirstInThisBracket) {
+        qb.where(conditionOrBracket);
+      } else if (logicalConnector === LogicalOperator.AND) {
+        qb.andWhere(conditionOrBracket);
+      } else {
+        qb.orWhere(conditionOrBracket);
+      }
     } else {
-      qb.orWhere(conditionOrBracket, parameters);
+      if (isFirstInThisBracket) {
+        qb.where(conditionOrBracket, parameters);
+      } else if (logicalConnector === LogicalOperator.AND) {
+        qb.andWhere(conditionOrBracket, parameters);
+      } else {
+        qb.orWhere(conditionOrBracket, parameters);
+      }
     }
   }
 
@@ -198,7 +213,7 @@ export class TypeOrmConditionBuilder {
    * This method is typically used for root filter groups or join ON conditions.
    * @param items The filter expressions to process.
    * @param currentAlias The alias of the current entity.
-   * @param qb The TypeORM SelectQueryBuilder.
+   * @param qb The TypeORM SelectQueryBuilder or WhereExpressionBuilder.
    * @param groupLogicalOperator The logical operator for the current group.
    * @param visitor An object with `visitAndGroup` and `visitOrGroup` methods for recursive processing.
    * @returns True if any WHERE clauses were applied, false otherwise.
@@ -206,7 +221,7 @@ export class TypeOrmConditionBuilder {
   public processGroupItems(
     items: ReadonlyArray<IFilterExpression>,
     currentAlias: string,
-    qb: SelectQueryBuilder<any>,
+    qb: SelectQueryBuilder<any> | WhereExpressionBuilder,
     groupLogicalOperator: LogicalOperator,
     visitor: { visitAndGroup: Function; visitOrGroup: Function },
   ): boolean {

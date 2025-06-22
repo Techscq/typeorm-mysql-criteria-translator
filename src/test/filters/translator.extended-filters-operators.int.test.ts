@@ -167,7 +167,7 @@ describe('TypeOrmMysqlTranslator - Extended Filter Operators', () => {
     const fetchedUsers = await qb.getMany();
 
     expect(sql).toContain(
-      `WHERE \`${criteria.alias}\`.\`created_at\` BETWEEN ? AND ?`,
+      `WHERE (\`${criteria.alias}\`.\`created_at\` BETWEEN ? AND ?)`,
     );
     expect(params['param_0']).toBe(dateMin);
     expect(params['param_1']).toBe(dateMax);
@@ -218,7 +218,7 @@ describe('TypeOrmMysqlTranslator - Extended Filter Operators', () => {
     const fetchedUsers = await qb.getMany();
 
     expect(sql).toContain(
-      `WHERE \`${criteria.alias}\`.\`created_at\` NOT BETWEEN ? AND ?`,
+      `WHERE (\`${criteria.alias}\`.\`created_at\` NOT BETWEEN ? AND ?)`,
     );
     expect(params['param_0']).toBe(dateMin);
     expect(params['param_1']).toBe(dateMax);
@@ -255,7 +255,7 @@ describe('TypeOrmMysqlTranslator - Extended Filter Operators', () => {
     const params = qb.getParameters();
     const fetchedUsers = await qb.getMany();
 
-    expect(sql).toContain(`WHERE \`${criteria.alias}\`.\`username\` REGEXP ?`);
+    expect(sql).toContain(`WHERE (\`${criteria.alias}\`.\`username\` REGEXP ?)`);
     expect(params['param_0']).toBe(regex);
     expect(fetchedUsers.length).toBe(expectedUsers.length);
     fetchedUsers.forEach((fetchedUser) => {
@@ -286,7 +286,7 @@ describe('TypeOrmMysqlTranslator - Extended Filter Operators', () => {
     const params = qb.getParameters();
     const fetchedUsers = await qb.getMany();
 
-    expect(sql).toContain(`WHERE \`${criteria.alias}\`.\`email\` LIKE ?`);
+    expect(sql).toContain(`WHERE (\`${criteria.alias}\`.\`email\` LIKE ?)`);
     expect(params['param_0']).toBe(pattern);
     expect(fetchedUsers.length).toBe(expectedUsers.length);
     fetchedUsers.forEach((fetchedUser) => {
@@ -327,7 +327,7 @@ describe('TypeOrmMysqlTranslator - Extended Filter Operators', () => {
     const params = qb.getParameters();
     const fetchedUsers = await qb.getMany();
 
-    expect(sql).toContain(`WHERE \`${criteria.alias}\`.\`email\` NOT LIKE ?`);
+    expect(sql).toContain(`WHERE (\`${criteria.alias}\`.\`email\` NOT LIKE ?)`);
     expect(params['param_0']).toBe(patternToExclude);
     expect(fetchedUsers.length).toBe(expectedUsers.length);
     fetchedUsers.forEach((fetchedUser) => {

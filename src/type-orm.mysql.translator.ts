@@ -1,4 +1,4 @@
-import { type ObjectLiteral, SelectQueryBuilder } from 'typeorm';
+import { Brackets, type ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import {
   CriteriaTranslator,
   type CriteriaSchema,
@@ -14,8 +14,6 @@ import {
   type SimpleJoin,
   InnerJoinCriteria,
 } from '@nulledexp/translatable-criteria';
-
-import { TypeOrmParameterManager } from './utils/type-orm-parameter-manager.js';
 import {
   TypeOrmFilterFragmentBuilder,
   type TypeOrmConditionFragment,
@@ -24,6 +22,7 @@ import { TypeOrmConditionBuilder } from './utils/type-orm-condition-builder.js';
 import { TypeOrmJoinApplier } from './utils/type-orm-join-applier.js';
 import { QueryState } from './utils/query-state.js';
 import { QueryApplier } from './utils/query-applier.js';
+import { TypeOrmParameterManager } from './utils/type-orm-parameter-manager.js';
 
 /**
  * TypeOrmMysqlTranslator translates a Criteria object into a TypeORM SelectQueryBuilder
@@ -128,14 +127,17 @@ export class TypeOrmMysqlTranslator<
     qb: SelectQueryBuilder<T>,
   ): void {
     if (criteria.rootFilterGroup.items.length > 0) {
-      const appliedWhere = this._conditionBuilder.processGroupItems(
-        criteria.rootFilterGroup.items,
-        criteria.alias,
-        qb,
-        criteria.rootFilterGroup.logicalOperator,
-        this,
-      );
-      this._queryState.setQueryHasWhereClauses(appliedWhere);
+      const rootBracket = new Brackets((bracketQb) => {
+        this._conditionBuilder.processGroupItems(
+          criteria.rootFilterGroup.items,
+          criteria.alias,
+          bracketQb,
+          criteria.rootFilterGroup.logicalOperator,
+          this,
+        );
+      });
+      qb.where(rootBracket);
+      this._queryState.setQueryHasWhereClauses(true);
     }
   }
 

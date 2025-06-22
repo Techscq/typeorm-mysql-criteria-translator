@@ -83,7 +83,7 @@ describe('TypeOrmMysqlTranslator - Skip/Take Pagination with One-to-One Joins', 
 
     const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .join(
-        'profile', // Corrected: Added alias 'profile'
+        'profile',
         CriteriaFactory.GetInnerJoinCriteria(CriteriaUserProfileSchema),
         {
           parent_field: 'uuid',
@@ -121,7 +121,7 @@ describe('TypeOrmMysqlTranslator - Skip/Take Pagination with One-to-One Joins', 
 
     const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .join(
-        'profile', // Corrected: Added alias 'profile'
+        'profile',
         CriteriaFactory.GetInnerJoinCriteria(CriteriaUserProfileSchema).orderBy(
           'bio',
           OrderDirection.ASC,
@@ -159,7 +159,7 @@ describe('TypeOrmMysqlTranslator - Skip/Take Pagination with One-to-One Joins', 
 
     const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .join(
-        'profile', // Corrected: Added alias 'profile'
+        'profile',
         CriteriaFactory.GetLeftJoinCriteria(CriteriaUserProfileSchema),
         {
           parent_field: 'uuid',
@@ -202,7 +202,7 @@ describe('TypeOrmMysqlTranslator - Skip/Take Pagination with One-to-One Joins', 
 
     const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .join(
-        'profile', // Corrected: Added alias 'profile'
+        'profile',
         CriteriaFactory.GetLeftJoinCriteria(CriteriaUserProfileSchema).orderBy(
           'bio',
           OrderDirection.ASC,

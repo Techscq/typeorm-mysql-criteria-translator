@@ -77,7 +77,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const params = qb.getParameters();
     const fetchedUsers = await qb.getMany();
 
-    expect(sql).toContain(`WHERE \`${criteria.alias}\`.\`email\` LIKE ?`);
+    expect(sql).toContain(`WHERE (\`${criteria.alias}\`.\`email\` LIKE ?)`);
     expect(params['param_0']).toBe(`%${suffixToMatch}`);
     expect(fetchedUsers.length).toBe(usersToExpect.length);
     fetchedUsers.forEach((fetchedUser) => {
@@ -113,7 +113,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const params = qb.getParameters();
     const fetchedUsers = await qb.getMany();
 
-    expect(sql).toContain(`WHERE \`${criteria.alias}\`.\`username\` LIKE ?`);
+    expect(sql).toContain(`WHERE (\`${criteria.alias}\`.\`username\` LIKE ?)`);
     expect(params['param_0']).toBe(`${prefixToMatch}%`);
     expect(fetchedUsers.length).toBe(usersToExpect.length);
     fetchedUsers.forEach((fetchedUser) => {
@@ -157,7 +157,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const params = qb.getParameters();
     const fetchedPosts = await qb.getMany();
 
-    expect(sql).toContain(`WHERE \`${criteria.alias}\`.\`body\` NOT LIKE ?`);
+    expect(sql).toContain(`WHERE (\`${criteria.alias}\`.\`body\` NOT LIKE ?)`);
     expect(params['param_0']).toBe(`%${substringToExclude}%`);
     expect(fetchedPosts.length).toBe(postsToExpect.length);
     fetchedPosts.forEach((fetchedPost) => {
@@ -202,7 +202,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const fetchedUsers = await qb.getMany();
 
     expect(sql).toContain(
-      `WHERE \`${criteria.alias}\`.\`username\` NOT LIKE ?`,
+      `WHERE (\`${criteria.alias}\`.\`username\` NOT LIKE ?)`,
     );
     expect(params['param_0']).toBe(patternToExclude);
     expect(fetchedUsers.length).toBe(usersToExpect.length);
@@ -242,7 +242,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const fetchedUsers = await qb.getMany();
 
     expect(sql).toContain(
-      `WHERE \`${criteria.alias}\`.\`uuid\` NOT IN (?, ?)`,
+      `WHERE (\`${criteria.alias}\`.\`uuid\` NOT IN (?, ?))`,
     );
     expect(params['param_0']).toEqual(uuidsToExclude);
     expect(fetchedUsers.length).toBe(usersToExpect.length);
@@ -283,7 +283,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     });
     const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
 
-    expect(qb.getSql()).toContain(`WHERE \`${criteria.alias}\`.\`email\` = ?`);
+    expect(qb.getSql()).toContain(`WHERE (\`${criteria.alias}\`.\`email\` = ?)`);
     expect(qb.getParameters()).toEqual({ param_0: testUser.email });
   });
 
@@ -310,7 +310,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
 
     expect(qb.getSql()).toContain(
-      `WHERE \`${criteria.alias}\`.\`username\` LIKE ? AND \`${criteria.alias}\`.\`email\` != ?`,
+      `WHERE (\`${criteria.alias}\`.\`username\` LIKE ? AND \`${criteria.alias}\`.\`email\` != ?)`,
     );
     expect(qb.getParameters()).toEqual({
       param_0: `%${userForLike.username.substring(0, 3)}%`,
@@ -341,7 +341,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const qb = await translateAndGetQueryBuilder<Post>(criteria, PostEntity);
 
     expect(qb.getSql()).toContain(
-      `WHERE (\`${criteria.alias}\`.\`title\` = ?) OR (\`${criteria.alias}\`.\`body\` LIKE ?)`,
+      `WHERE ((\`${criteria.alias}\`.\`title\` = ?) OR (\`${criteria.alias}\`.\`body\` LIKE ?))`,
     );
     expect(qb.getParameters()).toEqual({
       param_0: postForEquals.title,
@@ -376,7 +376,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const sql = qb.getSql();
 
     expect(sql).toContain(
-      `WHERE (\`${criteria.alias}\`.\`email\` LIKE ? AND \`${criteria.alias}\`.\`username\` = ?) OR (\`${criteria.alias}\`.\`username\` = ?) OR (\`${criteria.alias}\`.\`uuid\` = ?)`,
+      `WHERE ((\`${criteria.alias}\`.\`email\` LIKE ? AND \`${criteria.alias}\`.\`username\` = ?) OR (\`${criteria.alias}\`.\`username\` = ?) OR (\`${criteria.alias}\`.\`uuid\` = ?))`,
     );
     expect(qb.getParameters()).toEqual({
       param_0: '%@example.com%',
@@ -401,7 +401,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const qb = await translateAndGetQueryBuilder<Post>(criteria, PostEntity);
 
     expect(qb.getSql()).toContain(
-      `WHERE (\`${criteria.alias}\`.\`body\` IS NULL) OR (\`${criteria.alias}\`.\`title\` IS NOT NULL)`,
+      `WHERE ((\`${criteria.alias}\`.\`body\` IS NULL) OR (\`${criteria.alias}\`.\`title\` IS NOT NULL))`,
     );
     expect(qb.getParameters()).toEqual({});
   });
@@ -431,7 +431,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     const params = qb.getParameters();
     const fetchedUsers = await qb.getMany();
 
-    expect(sql).toContain(`WHERE \`${criteria.alias}\`.\`uuid\` IN (?, ?)`);
+    expect(sql).toContain(`WHERE (\`${criteria.alias}\`.\`uuid\` IN (?, ?))`);
     expect(params['param_0']).toEqual(userIds);
     expect(fetchedUsers.length).toBe(expectedUsers.length);
 
