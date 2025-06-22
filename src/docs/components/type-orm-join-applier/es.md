@@ -6,7 +6,7 @@ El `TypeOrmJoinApplier` es una clase auxiliar especializada en aplicar cláusula
 
 - Determinar el tipo de `JOIN` a aplicar.
 - Construir la propiedad de relación o el nombre de la tabla para el `JOIN`.
-- Generar la condición `ON` para el `JOIN`, que puede incluir filtros y grupos lógicos complejos, delegando esta tarea a `TypeOrmQueryStructureHelper`.
+- Generar la condición `ON` para el `JOIN`, que puede incluir filtros y grupos lógicos complejos, delegando esta tarea a `TypeOrmConditionBuilder`.
 - Invocar el método de `JOIN` apropiado en el `QueryBuilder` (ej. `innerJoinAndSelect`, `leftJoinAndSelect`).
 - Gestionar la adición de campos seleccionados y cláusulas `ORDER BY` provenientes del `JoinCriteria` al estado global del traductor.
 - Aplicar optimizaciones específicas, como la exclusión de claves foráneas redundantes en ciertos tipos de joins.
@@ -21,12 +21,12 @@ El `TypeOrmJoinApplier` es una clase auxiliar especializada en aplicar cláusula
   - **SRP y Cohesión:** Permite que `TypeOrmJoinApplier` se enfoque únicamente en los aspectos del `JOIN`.
   - **Testeabilidad:** Permite probar la lógica de aplicación de joins de forma más aislada.
 
-### 2.2. Construcción de Condiciones `ON` mediante `TypeOrmQueryStructureHelper`
+### 2.2. Construcción de Condiciones `ON` mediante `TypeOrmConditionBuilder`
 
-- **Descripción:** Para construir la cadena de condición `ON` y sus parámetros a partir del `rootFilterGroup` del `JoinCriteria`, `TypeOrmJoinApplier` ahora delega esta tarea al método `buildConditionStringFromGroup` de `TypeOrmQueryStructureHelper`.
+- **Descripción:** Para construir la cadena de condición `ON` y sus parámetros a partir del `rootFilterGroup` del `JoinCriteria`, `TypeOrmJoinApplier` ahora delega esta tarea al método `buildConditionStringFromGroup` de `TypeOrmConditionBuilder`.
 - **Justificación (El "Porqué"):**
-  - **Consistencia y Reutilización de Código (DRY):** `TypeOrmQueryStructureHelper.buildConditionStringFromGroup` (y la lógica interna que utiliza, similar a `processGroupItems`) ya contiene la lógica robusta para convertir una estructura de `FilterGroup` en una condición SQL, incluyendo el manejo de `Filter`s individuales, `FilterGroup`s anidados y la correcta aplicación de la lógica `AND`/`OR` con paréntesis. Reutilizar esta lógica evita tener implementaciones duplicadas y asegura que las condiciones `ON` se procesen con la misma robustez que las cláusulas `WHERE` principales.
-  - **Mayor Robustez para Condiciones `ON` Complejas:** Al centralizar el procesamiento de `FilterGroup` en `TypeOrmQueryStructureHelper`, cualquier mejora o corrección en esa lógica beneficia automáticamente tanto a las cláusulas `WHERE` como a las condiciones `ON` de los `JOIN`s.
+  - **Consistencia y Reutilización de Código (DRY):** `TypeOrmConditionBuilder.buildConditionStringFromGroup` (y la lógica interna que utiliza, similar a `processGroupItems`) ya contiene la lógica robusta para convertir una estructura de `FilterGroup` en una condición SQL, incluyendo el manejo de `Filter`s individuales, `FilterGroup`s anidados y la correcta aplicación de la lógica `AND`/`OR` con paréntesis. Reutilizar esta lógica evita tener implementaciones duplicadas y asegura que las condiciones `ON` se procesen con la misma robustez que las cláusulas `WHERE` principales.
+  - **Mayor Robustez para Condiciones `ON` Complejas:** Al centralizar el procesamiento de `FilterGroup` en `TypeOrmConditionBuilder`, cualquier mejora o corrección en esa lógica beneficia automáticamente tanto a las cláusulas `WHERE` como a las condiciones `ON` de los `JOIN`s.
   - **Mantenibilidad Simplificada:** Tener una única forma bien probada de procesar `FilterGroup`s reduce la superficie de código a mantener y probar.
   - **Flexibilidad en `ON`:** Permite que las condiciones `ON` de los `JOIN`s sean tan expresivas como las cláusulas `WHERE`, soportando filtros complejos y grupos lógicos anidados.
 

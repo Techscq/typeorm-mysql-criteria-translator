@@ -36,7 +36,7 @@ The `TypeOrmMysqlTranslator` is the central class responsible for converting a `
 - **Description:** Much of the specific logic for building SQL fragments, managing parameters, applying joins, and structuring the query is delegated to specialized classes:
   - `TypeOrmParameterManager`: SQL parameter name management.
   - `TypeOrmFilterFragmentBuilder`: Construction of SQL fragments for each `FilterOperator`.
-  - `TypeOrmQueryStructureHelper`: Application of conditions, `Brackets`, resolution of `SELECT`s, and cursor-based pagination logic.
+  - `TypeOrmConditionBuilder`: Application of conditions, `Brackets`, resolution of `SELECT`s, and cursor-based pagination logic.
   - `TypeOrmJoinApplier`: Application of `JOIN`s and their `ON` conditions.
 - **Justification (The "Why"):**
   - **Single Responsibility Principle (SRP):** Each helper class focuses on a specific task. This makes the main `TypeOrmMysqlTranslator` more cohesive, focusing on orchestrating the visit process and the general application of `Criteria` parts, rather than housing all low-level logic.
@@ -45,7 +45,7 @@ The `TypeOrmMysqlTranslator` is the central class responsible for converting a `
   - **Readability and Maintainability:** Reduces the amount of code and cyclomatic complexity within the `TypeOrmMysqlTranslator` class, making it easier to understand, modify, and maintain.
   - **Encapsulation of Specific Complexity:**
     - **Filter Operator Translation (`TypeOrmFilterFragmentBuilder`):** Translating each `FilterOperator` (e.g., `EQUALS`, `LIKE`, `SET_CONTAINS`, `JSON_CONTAINS`) into its specific MySQL SQL syntax, including handling `NULL`s or functions like `FIND_IN_SET`, is a specialized task. Delegating it allows `TypeOrmMysqlTranslator` not to need to know these intimate MySQL details. For example, translating `SET_CONTAINS` to `(field IS NOT NULL AND FIND_IN_SET(?, field) > 0)` and `SET_NOT_CONTAINS` to `(field IS NULL OR FIND_IN_SET(?, field) = 0)` encapsulates the logic to correctly handle `NULL`s in MySQL `SET` type fields.
-    - **Cursor Pagination Logic (`TypeOrmQueryStructureHelper`):** Cursor-based pagination is more complex than simple `OFFSET/LIMIT`, as it requires building a `WHERE` clause that compares multiple fields (e.g., `(field1 > :value1) OR (field1 = :value1 AND field2 > :value2)`). This logic, including correct parameter generation and handling cursor direction (ASC/DESC), is encapsulated in `TypeOrmQueryStructureHelper`.
+    - **Cursor Pagination Logic (`TypeOrmConditionBuilder`):** Cursor-based pagination is more complex than simple `OFFSET/LIMIT`, as it requires building a `WHERE` clause that compares multiple fields (e.g., `(field1 > :value1) OR (field1 = :value1 AND field2 > :value2)`). This logic, including correct parameter generation and handling cursor direction (ASC/DESC), is encapsulated in `TypeOrmConditionBuilder`.
 
 ## 3. General Flow of Operation
 

@@ -23,7 +23,7 @@ El `TypeOrmParameterManager` es una clase sencilla pero crucial cuya única resp
 
 ## 3. Flujo General de Operación
 
-1.  **Instanciación:** Una instancia de `TypeOrmParameterManager` es creada por `TypeOrmMysqlTranslator` en su constructor. Esta misma instancia se pasa a otros helpers que también necesitan generar parámetros (como `TypeOrmFilterFragmentBuilder` y `TypeOrmQueryStructureHelper`).
+1.  **Instanciación:** Una instancia de `TypeOrmParameterManager` es creada por `TypeOrmMysqlTranslator` en su constructor. Esta misma instancia se pasa a otros helpers que también necesitan generar parámetros (como `TypeOrmFilterFragmentBuilder` y `TypeOrmConditionBuilder`).
 2.  **Reseteo (`reset()`):**
     - Al inicio de cada llamada a `TypeOrmMysqlTranslator.visitRoot()`, se invoca `this.parameterManager.reset()`.
     - Esto reinicia el `paramCounter` interno a `0`.

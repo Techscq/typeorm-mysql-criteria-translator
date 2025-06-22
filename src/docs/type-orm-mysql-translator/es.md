@@ -36,7 +36,7 @@ El `TypeOrmMysqlTranslator` es la clase central encargada de convertir un objeto
 - **Descripción:** Gran parte de la lógica específica de construcción de fragmentos SQL, gestión de parámetros, aplicación de joins y estructuración de la consulta se delega a clases especializadas:
   - `TypeOrmParameterManager`: Gestión de nombres de parámetros SQL.
   - `TypeOrmFilterFragmentBuilder`: Construcción de fragmentos SQL para cada `FilterOperator`.
-  - `TypeOrmQueryStructureHelper`: Aplicación de condiciones, `Brackets`, resolución de `SELECT`s y lógica de paginación por cursor.
+  - `TypeOrmConditionBuilder`: Aplicación de condiciones, `Brackets`, resolución de `SELECT`s y lógica de paginación por cursor.
   - `TypeOrmJoinApplier`: Aplicación de `JOIN`s y sus condiciones `ON`.
 - **Justificación (El "Porqué"):**
   - **Principio de Responsabilidad Única (SRP):** Cada clase auxiliar se enfoca en una tarea específica. Esto hace que el `TypeOrmMysqlTranslator` principal sea más cohesivo, centrándose en orquestar el proceso de visita y la aplicación general de las partes del `Criteria`, en lugar de albergar toda la lógica de bajo nivel.
@@ -45,7 +45,7 @@ El `TypeOrmMysqlTranslator` es la clase central encargada de convertir un objeto
   - **Legibilidad y Mantenibilidad:** Reduce la cantidad de código y la complejidad ciclomática dentro de la clase `TypeOrmMysqlTranslator`, haciéndola más fácil de entender, modificar y mantener.
   - **Encapsulación de Complejidad Específica:**
     - **Traducción de Operadores de Filtro (`TypeOrmFilterFragmentBuilder`):** La traducción de cada `FilterOperator` (ej. `EQUALS`, `LIKE`, `SET_CONTAINS`, `JSON_CONTAINS`) a su sintaxis SQL específica de MySQL, incluyendo el manejo de `NULL`s o funciones como `FIND_IN_SET`, es una tarea especializada. Delegarla permite que `TypeOrmMysqlTranslator` no necesite conocer estos detalles íntimos de MySQL. Por ejemplo, la traducción de `SET_CONTAINS` a `(campo IS NOT NULL AND FIND_IN_SET(?, campo) > 0)` y `SET_NOT_CONTAINS` a `(campo IS NULL OR FIND_IN_SET(?, campo) = 0)` encapsula la lógica para manejar correctamente los `NULL` en campos de tipo `SET` de MySQL.
-    - **Lógica de Paginación por Cursor (`TypeOrmQueryStructureHelper`):** La paginación basada en cursor es más compleja que el simple `OFFSET/LIMIT`, ya que requiere construir una cláusula `WHERE` que compare múltiples campos (ej. `(campo1 > :valor1) OR (campo1 = :valor1 AND campo2 > :valor2)`). Esta lógica, incluyendo la correcta generación de parámetros y el manejo de la dirección del cursor (ASC/DESC), se encapsula en `TypeOrmQueryStructureHelper`.
+    - **Lógica de Paginación por Cursor (`TypeOrmConditionBuilder`):** La paginación basada en cursor es más compleja que el simple `OFFSET/LIMIT`, ya que requiere construir una cláusula `WHERE` que compare múltiples campos (ej. `(campo1 > :valor1) OR (campo1 = :valor1 AND campo2 > :valor2)`). Esta lógica, incluyendo la correcta generación de parámetros y el manejo de la dirección del cursor (ASC/DESC), se encapsula en `TypeOrmConditionBuilder`.
 
 ## 3. Flujo General de Operación
 

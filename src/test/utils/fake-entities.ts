@@ -20,7 +20,7 @@ export const UserProfileSchema = GetTypedCriteriaSchema({
   joins: [
     {
       alias: 'user',
-      relation_type: 'many_to_one',
+      relation_type: 'one_to_one',
       target_source_name: 'user',
     },
   ],
@@ -59,7 +59,7 @@ export const UserSchema = GetTypedCriteriaSchema({
     },
     {
       alias: 'profile',
-      relation_type: 'one_to_many',
+      relation_type: 'one_to_one',
       target_source_name: 'user_profile',
     },
   ],

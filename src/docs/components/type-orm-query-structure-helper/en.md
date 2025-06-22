@@ -1,8 +1,8 @@
-# TypeOrmQueryStructureHelper
+# TypeOrmConditionBuilder
 
 ## 1. Main Purpose
 
-The `TypeOrmQueryStructureHelper` is a helper class that encapsulates the logic for manipulating the structure of a TypeORM `SelectQueryBuilder`. Its primary responsibilities include:
+The `TypeOrmConditionBuilder` is a helper class that encapsulates the logic for manipulating the structure of a TypeORM `SelectQueryBuilder`. Its primary responsibilities include:
 
 - Resolving and applying `SELECT` clauses, ensuring all necessary fields (explicit, for ordering, or for cursor) are included.
 - Building and applying conditions for cursor-based pagination.

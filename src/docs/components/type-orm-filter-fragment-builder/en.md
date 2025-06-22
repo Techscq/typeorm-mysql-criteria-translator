@@ -214,7 +214,7 @@ This section details the logic and reasons behind the translation of more comple
 
 - **Description:** The public `build` method returns an object of type `TypeOrmConditionFragment`, which has the form `{ queryFragment: string, parameters: ObjectLiteral }`.
 - **Justification (The "Why"):**
-  - **Clear Separation of Query and Parameters:** Allows the consumer (primarily `TypeOrmQueryStructureHelper` within `TypeOrmMysqlTranslator`) to receive both the SQL fragment and the necessary parameter object desacoupled.
+  - **Clear Separation of Query and Parameters:** Allows the consumer (primarily `TypeOrmConditionBuilder` within `TypeOrmMysqlTranslator`) to receive both the SQL fragment and the necessary parameter object desacoupled.
   - **Integration with TypeORM:** TypeORM expects conditions and their parameters to be provided this way (`queryBuilder.where("field = :name", { name: "value" })`) to correctly handle query parameterization, which is essential for security (preventing SQL injection) and efficiency (reuse of query plans by the DB).
 
 ## 3. General Flow of Operation of the `build` Method

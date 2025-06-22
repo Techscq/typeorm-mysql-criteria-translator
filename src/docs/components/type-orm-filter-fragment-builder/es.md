@@ -215,7 +215,7 @@ Esta sección detalla la lógica y las razones detrás de la traducción de oper
 
 - **Descripción:** El método público `build` devuelve un objeto de tipo `TypeOrmConditionFragment`, que tiene la forma `{ queryFragment: string, parameters: ObjectLiteral }`.
 - **Justificación (El "Porqué"):**
-  - **Separación Clara de Consulta y Parámetros:** Permite que el consumidor (principalmente `TypeOrmQueryStructureHelper` dentro de `TypeOrmMysqlTranslator`) reciba tanto el fragmento de SQL como el objeto de parámetros de forma desacoplada.
+  - **Separación Clara de Consulta y Parámetros:** Permite que el consumidor (principalmente `TypeOrmConditionBuilder` dentro de `TypeOrmMysqlTranslator`) reciba tanto el fragmento de SQL como el objeto de parámetros de forma desacoplada.
   - **Integración con TypeORM:** TypeORM espera que las condiciones y sus parámetros se proporcionen de esta manera (`queryBuilder.where("campo = :nombre", { nombre: "valor" })`) para manejar correctamente la parametrización de consultas, lo que es esencial para la seguridad (prevención de inyección SQL) y la eficiencia (reutilización de planes de consulta por la BD).
 
 ## 3. Flujo General de Operación del Método `build`

@@ -1,5 +1,5 @@
 import { type ObjectLiteral, type SelectQueryBuilder } from 'typeorm';
-import type { TypeOrmQueryStructureHelper } from './type-orm-query-structure-helper.js';
+import type { TypeOrmConditionBuilder } from './type-orm-condition-builder.js';
 import {
   type CriteriaSchema,
   type InnerJoinCriteria,
@@ -8,10 +8,33 @@ import {
   type PivotJoin,
   type SimpleJoin,
 } from '@nulledexp/translatable-criteria';
+import { QueryState } from './query-state.js';
 
+/**
+ * TypeOrmJoinApplier is responsible for applying join logic to a TypeORM SelectQueryBuilder.
+ * It handles the construction of ON conditions and the selection of fields from joined entities.
+ */
 export class TypeOrmJoinApplier<T extends ObjectLiteral> {
-  constructor(private _queryStructureHelper: TypeOrmQueryStructureHelper<T>) {}
+  /**
+   * Constructs a new TypeOrmJoinApplier instance.
+   * @param _conditionBuilder The TypeOrmConditionBuilder instance for building join conditions.
+   * @param _queryState The QueryState instance for managing query state.
+   */
+  constructor(
+    private _conditionBuilder: TypeOrmConditionBuilder,
+    private _queryState: QueryState,
+  ) {}
 
+  /**
+   * Applies join logic (INNER or LEFT) to the query builder.
+   * It constructs the ON clause based on the join criteria's root filter group
+   * and handles the selection of fields from the joined entities.
+   * @param qb The TypeORM SelectQueryBuilder.
+   * @param joinType The type of join ('inner' or 'left').
+   * @param criteria The join criteria.
+   * @param parameters Join parameters including aliases and field mappings.
+   * @returns The modified SelectQueryBuilder.
+   */
   public applyJoinLogic(
     qb: SelectQueryBuilder<T>,
     joinType: 'inner' | 'left',
@@ -28,7 +51,7 @@ export class TypeOrmJoinApplier<T extends ObjectLiteral> {
 
     if (criteria.rootFilterGroup.items.length > 0) {
       const onConditionResult =
-        this._queryStructureHelper.buildConditionStringFromGroup(
+        this._conditionBuilder.buildConditionStringFromGroup(
           criteria.rootFilterGroup,
           joinAlias,
         );
@@ -38,10 +61,7 @@ export class TypeOrmJoinApplier<T extends ObjectLiteral> {
       }
     }
 
-    this._queryStructureHelper.collectCursor(
-      parameters.join_alias,
-      criteria.cursor,
-    );
+    this._queryState.collectCursor(parameters.join_alias, criteria.cursor);
 
     const baseJoinMethod =
       joinType === 'inner' ? qb.innerJoinAndSelect : qb.leftJoinAndSelect;
@@ -54,40 +74,20 @@ export class TypeOrmJoinApplier<T extends ObjectLiteral> {
       onConditionParams,
     );
 
-    this._queryStructureHelper.resolveSelects(joinAlias, criteria);
-    switch (parameters.relation_type) {
-      case 'many_to_one':
-        this._queryStructureHelper.clearAmbiguousSelect(
-          `${parameters.parent_alias}.${String(parameters.parent_field)}`,
-        );
-        this._queryStructureHelper.addFieldToSelection(
-          `${parameters.parent_alias}.${String(parameters.join_field)}`,
-        );
-        break;
-      case 'one_to_many':
-        this._queryStructureHelper.clearAmbiguousSelect(
-          `${joinAlias}.${String(parameters.join_field)}`,
-        );
-        this._queryStructureHelper.addFieldToSelection(
-          `${parameters.parent_alias}.${String(parameters.parent_field)}`,
-        );
-        this._queryStructureHelper.addFieldToSelection(
-          `${joinAlias}.${String(parameters.parent_field)}`,
-        );
-
-        break;
-      case 'one_to_one':
-        throw new Error(
-          "For 'one-to-one' relations, please model them in the CriteriaSchema using 'many-to-one' from the entity owning the foreign key, and 'one-to-many' from the other entity. This approach ensures consistent query translation with TypeORM, as direct 'one-to-one' translation is currently restricted.",
-        );
-    }
-    this._queryStructureHelper.addFieldToSelection(
+    this._queryState.resolveSelects(joinAlias, criteria);
+    this._queryState.clearAmbiguousSelect(
+      `${parameters.parent_alias}.${String(parameters.parent_field)}`,
+    );
+    this._queryState.clearAmbiguousSelect(
+      `${joinAlias}.${String(parameters.join_field)}`,
+    );
+    this._queryState.addFieldToSelection(
       `${joinAlias}.${criteria.identifierField}`,
     );
-    this._queryStructureHelper.addFieldToSelection(
+    this._queryState.addFieldToSelection(
       `${parameters.parent_alias}.${parameters.parent_identifier}`,
     );
-    this._queryStructureHelper.recordOrderBy(criteria.orders, joinAlias);
+    this._queryState.recordOrderBy(criteria.orders, joinAlias);
     return qb;
   }
 }

@@ -137,15 +137,15 @@ translator.ts`)**: The main class that implements the `CriteriaTranslator` inter
 - **[`TypeOrmFilterFragmentBuilder`](./src/docs/components/type-orm-filter-fragment-builder/en.md)
   (`utils/type-orm-filter-fragment-builder.ts`)**:
   Responsible for building SQL fragments (`WHERE field = :param`) and parameter objects for each individual `Filter`, handling the specific logic for each `FilterOperator`.
-- **[`TypeOrmQueryStructureHelper`](./src/docs/components/type-orm-query-structure-helper/en.md)
-  (`utils/type-orm-query-structure-helper.ts`)**:
+- **[`TypeOrmConditionBuilder`](./src/docs/components/type-orm-query-structure-helper/en.md)
+  (`utils/type-orm-condition-builder.ts`)**:
   Helps apply
   conditions (`WHERE`, `AND WHERE`, `OR WHERE`) to the `QueryBuilder`, processes nested filter groups using TypeORM `Brackets`, resolves field selections (`SELECT ...`), builds logic for cursor-based pagination, and generates condition strings for contexts like `JOIN ON` clauses.
 - **[`TypeOrmJoinApplier`](./src/docs/components/type-orm-join-applier/en.md)
   (`utils/type-orm-join-applier.ts`)**:
   Specifically handles
   applying
-  `JOIN`s (`INNER JOIN`, `LEFT JOIN`) to the `QueryBuilder`. It constructs `ON` conditions by delegating to `TypeOrmQueryStructureHelper` (which in turn uses `TypeOrmFilterFragmentBuilder` for individual filter parts) and manages field selection and ordering from joined entities.
+  `JOIN`s (`INNER JOIN`, `LEFT JOIN`) to the `QueryBuilder`. It constructs `ON` conditions by delegating to `TypeOrmConditionBuilder` (which in turn uses `TypeOrmFilterFragmentBuilder` for individual filter parts) and manages field selection and ordering from joined entities.
 
 ## Tests
 

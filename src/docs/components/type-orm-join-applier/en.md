@@ -6,7 +6,7 @@ The `TypeOrmJoinApplier` is a specialized helper class for applying `JOIN` claus
 
 - Determining the type of `JOIN` to apply.
 - Constructing the relation property or table name for the `JOIN`.
-- Generating the `ON` condition for the `JOIN`, which can include complex filters and logical groups, by delegating this task to `TypeOrmQueryStructureHelper`.
+- Generating the `ON` condition for the `JOIN`, which can include complex filters and logical groups, by delegating this task to `TypeOrmConditionBuilder`.
 - Invoking the appropriate `JOIN` method on the `QueryBuilder` (e.g., `innerJoinAndSelect`, `leftJoinAndSelect`).
 - Managing the addition of selected fields and `ORDER BY` clauses from the `JoinCriteria` to the translator's global state.
 - Applying specific optimizations, such as excluding redundant foreign keys in certain types of joins.
@@ -21,12 +21,12 @@ The `TypeOrmJoinApplier` is a specialized helper class for applying `JOIN` claus
   - **SRP and Cohesion:** Allows `TypeOrmJoinApplier` to focus solely on `JOIN` aspects.
   - **Testability:** Allows for more isolated testing of the join application logic.
 
-### 2.2. Construction of `ON` Conditions via `TypeOrmQueryStructureHelper`
+### 2.2. Construction of `ON` Conditions via `TypeOrmConditionBuilder`
 
-- **Description:** To construct the `ON` condition string and its parameters from the `JoinCriteria`'s `rootFilterGroup`, `TypeOrmJoinApplier` now delegates this task to the `buildConditionStringFromGroup` method of `TypeOrmQueryStructureHelper`.
+- **Description:** To construct the `ON` condition string and its parameters from the `JoinCriteria`'s `rootFilterGroup`, `TypeOrmJoinApplier` now delegates this task to the `buildConditionStringFromGroup` method of `TypeOrmConditionBuilder`.
 - **Justification (The "Why"):**
-  - **Consistency and Code Reusability (DRY):** `TypeOrmQueryStructureHelper.buildConditionStringFromGroup` (and the internal logic it uses, similar to `processGroupItems`) already contains robust logic for converting a `FilterGroup` structure into an SQL condition, including handling individual `Filter`s, nested `FilterGroup`s, and the correct application of `AND`/`OR` logic with parentheses. Reusing this logic avoids duplicate implementations and ensures `ON` conditions are processed with the same robustness as main `WHERE` clauses.
-  - **Increased Robustness for Complex `ON` Conditions:** By centralizing `FilterGroup` processing in `TypeOrmQueryStructureHelper`, any future improvements or fixes to that logic automatically benefit both `WHERE` clauses and `JOIN` `ON` conditions.
+  - **Consistency and Code Reusability (DRY):** `TypeOrmConditionBuilder.buildConditionStringFromGroup` (and the internal logic it uses, similar to `processGroupItems`) already contains robust logic for converting a `FilterGroup` structure into an SQL condition, including handling individual `Filter`s, nested `FilterGroup`s, and the correct application of `AND`/`OR` logic with parentheses. Reusing this logic avoids duplicate implementations and ensures `ON` conditions are processed with the same robustness as main `WHERE` clauses.
+  - **Increased Robustness for Complex `ON` Conditions:** By centralizing `FilterGroup` processing in `TypeOrmConditionBuilder`, any future improvements or fixes to that logic automatically benefit both `WHERE` clauses and `JOIN` `ON` conditions.
   - **Simplified Maintainability:** Having a single, well-tested way to process `FilterGroup`s reduces the codebase to maintain and test.
   - **Flexibility in `ON`:** Allows `JOIN` `ON` conditions to be as expressive as `WHERE` clauses, supporting complex filters and nested logical groups.
 
