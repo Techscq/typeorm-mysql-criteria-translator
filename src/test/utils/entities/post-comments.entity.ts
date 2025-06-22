@@ -1,5 +1,5 @@
 import { EntitySchema } from 'typeorm';
-import type { Comment } from '../../test/fake/fake-entities.js';
+import type { Comment } from '../fake-entities.js';
 import { BaseColumnSchemaPart, BaseIndexUuidCreatedAt } from './entity-base.js';
 
 export const PostCommentEntity = new EntitySchema<Comment>({
@@ -9,10 +9,6 @@ export const PostCommentEntity = new EntitySchema<Comment>({
   columns: {
     ...BaseColumnSchemaPart,
     comment_text: { type: 'varchar', length: '400' },
-  },
-  relationIds: {
-    /*post: { relationName: 'post', alias: 'post' },
-    user: { relationName: 'user', alias: 'user' },*/
   },
   relations: {
     user: {

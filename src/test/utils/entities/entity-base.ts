@@ -1,5 +1,5 @@
 import { EntitySchemaOptions } from 'typeorm';
-import type { EntityBase } from '../../test/fake/fake-entities.js';
+import type { EntityBase } from '../fake-entities.js';
 
 export const BaseIndexUuidCreatedAt = (
   tableName: string,

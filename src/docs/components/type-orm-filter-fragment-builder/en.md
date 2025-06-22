@@ -97,6 +97,7 @@ This section details the logic and reasons behind the translation of more comple
     - A `JSON_CONTAINS` condition is generated for each element in the filter's array.
     - These individual conditions are joined with the `OR` logical operator.
 - **Translation of `ARRAY_EQUALS`:**
+
   - **SQL Fragment (example for `value: ['tag1', 'tag2']` in `$.tags`):**
     `((JSON_LENGTH(JSON_EXTRACT(${fieldName}, '$.tags')) = :param_len) AND (JSON_CONTAINS(JSON_EXTRACT(${fieldName}, '$.tags'), :param_eq_el_0, '$')) AND (JSON_CONTAINS(JSON_EXTRACT(${fieldName}, '$.tags'), :param_eq_el_1, '$')))`
   - **Justification (The "Why"):**
@@ -107,6 +108,107 @@ This section details the logic and reasons behind the translation of more comple
       - This implementation ensures that both arrays have the same elements and the same number of them. **It does not guarantee the same order of elements.** If order is critical, this translation is not sufficient and would require much more complex comparison logic (possibly at the application level or with stored functions in MySQL if performance is crucial).
       - For most use cases where "the arrays have the same items, regardless of order" is sought, this approach is practical and efficient.
     - **Empty Array Handling:** If the filter array is empty (`[]`), the condition simplifies to `JSON_LENGTH(...) = 0`, which is correct.
+
+#### 2.3.4. `SET_CONTAINS_ANY` and `SET_CONTAINS_ALL` Operators (for comma-separated string fields)
+
+- **Purpose:** - `SET_CONTAINS_ANY`: Checks if a field (typically storing multiple values as a comma-separated string, like TypeORM's `simple-array`) contains at least one of the specified values. - `SET_CONTAINS_ALL`: Checks if a field contains all of the specified values. - **MySQL Translation:** Uses MySQL's `FIND_IN_SET()` function for each provided value, combined with `OR` (for `ANY`) or `AND` (for `ALL`). - **Criteria Example (`SET_CONTAINS_ANY`):**
+
+```typescript
+  { field: 'categories', operator: FilterOperator.SET_CONTAINS_ANY, value: ['tech', 'news'] }
+
+```
+
+- **Generated SQL Fragment (`SET_CONTAINS_ANY`):**
+  `(${fieldName} IS NOT NULL AND (FIND_IN_SET(:param_0, ${fieldName}) > 0 OR FIND_IN_SET(:param_1, ${fieldName}) > 0))`
+  - Parameters: `{ param_0: 'tech', param_1: 'news' }`
+- **Criteria Example (`SET_CONTAINS_ALL`):**
+
+```typescript
+{ field: 'categories', operator: FilterOperator.SET_CONTAINS_ALL, value: ['tech', 'review'] }
+```
+
+- **Generated SQL Fragment (`SET_CONTAINS_ALL`):**
+  `(${fieldName} IS NOT NULL AND (FIND_IN_SET(:param_0, ${fieldName}) > 0 AND FIND_IN_SET(:param_1, ${fieldName}) > 0))`
+  - Parameters: `{ param_0: 'tech', param_1: 'review' }`
+- **Considerations:**
+  - **`IS NOT NULL` Check:** The condition `${fieldName} IS NOT NULL` is included because a `NULL` field cannot contain any values.
+  - **Performance:** `FIND_IN_SET` on non-indexed string fields can be slow on large datasets. For performance-critical scenarios with set-like data, consider alternative schema designs (e.g., a separate related table) or ensure the column is of MySQL's `SET` type if appropriate and the number of distinct values is limited.
+  - **Empty Value Array:** If the `value` array in the criteria is empty:
+    - `SET_CONTAINS_ANY` translates to `1=0` (false).
+    - `SET_CONTAINS_ALL` translates to `1=1` (vacuously true).
+
+---
+
+#### 2.3.5. `BETWEEN` and `NOT_BETWEEN` Operators
+
+- **Purpose:**
+  - `BETWEEN`: Checks if a field's value falls within a specified inclusive range (value >= min AND value <= max).
+  - `NOT_BETWEEN`: Checks if a field's value falls outside a specified inclusive range.
+  - **MySQL Translation:** Uses the standard SQL `BETWEEN` and `NOT BETWEEN` operators.
+  - **Criteria Example (`BETWEEN`):**
+  -
+
+```typescript
+{ field: 'price', operator: FilterOperator.BETWEEN, value: [10, 20] }
+```
+
+- **Generated SQL Fragment (`BETWEEN`):**
+  `${fieldName} BETWEEN :param_min AND :param_max`
+  - Parameters: `{ param_min: 10, param_max: 20 }`
+- **Criteria Example (`NOT_BETWEEN`):**
+
+```typescript
+{ field: 'createdAt', operator: FilterOperator.NOT_BETWEEN, value: ['2023-01-01', '2023-12-31'] }
+```
+
+- **Generated SQL Fragment (`NOT_BETWEEN`):**
+  `${fieldName} NOT BETWEEN :param_min AND :param_max`
+  - Parameters: `{ param_min: '2023-01-01', param_max: '2023-12-31' }`
+- **Considerations:**
+  - **Value Format:** The `value` in the criteria must be an array containing exactly two non-null elements: `[minValue, maxValue]`. If not, the condition defaults to `1=0` (false).
+  - **Inclusivity:** SQL `BETWEEN` is inclusive of the boundary values.
+
+---
+
+#### 2.3.6. `MATCHES_REGEX` Operator
+
+- **Purpose:** Checks if a string field matches a given regular expression.
+  - **MySQL Translation:** Uses MySQL's `REGEXP` (or `RLIKE`) operator.
+  - **Criteria Example:**
+
+```typescript
+{ field: 'productCode', operator: FilterOperator.MATCHES_REGEX, value: '^PROD[0-9]{4}$' }
+```
+
+- **Generated SQL Fragment:**
+  `${fieldName} REGEXP :param_regex`
+  - Parameters: `{ param_regex: '^PROD[0-9]{4}$' }`
+- **Considerations:**
+  - **Performance:** Regular expression matching can be computationally intensive, especially with complex patterns or on non-indexed fields. Use with caution on large datasets.
+  - **Syntax:** The provided regular expression should conform to MySQL's supported regex syntax.
+
+---
+
+#### 2.3.7. `ILIKE` and `NOT_ILIKE` Operators
+
+- **Purpose:**
+  - `ILIKE`: Performs a case-insensitive `LIKE` operation.
+  - `NOT_ILIKE`: Performs a case-insensitive `NOT LIKE` operation.
+  - **MySQL Translation:**
+    - These operators are translated to MySQL's standard `LIKE` and `NOT LIKE` respectively.
+    - **Generated SQL Fragment (`ILIKE`):** `${fieldName} LIKE :param_value`
+    - **Generated SQL Fragment (`NOT_ILIKE`):** `${fieldName} NOT LIKE :param_value`
+  - **Criteria Example (`ILIKE`):**
+
+```typescript
+{ field: 'username', operator: FilterOperator.ILIKE, value: 'john%' }
+```
+
+- **Parameters:** `{ param_value: 'john%' }`
+- **Considerations:**
+  - **Case-Insensitivity in MySQL:** Standard `LIKE` in MySQL is often case-insensitive by default, depending on the collation of the column (e.g., collations ending in `_ci` like `utf8mb4_general_ci`). If the column's collation is case-sensitive (e.g., `_bin`), then `LIKE` will be case-sensitive.
+  - **True Case-Insensitivity (if needed):** If a truly case-insensitive comparison is required regardless of collation, one might typically use `LOWER(${fieldName}) LIKE LOWER(:param_value)`. However, this can prevent the use of indexes on `${fieldName}`. The current translator uses the simpler `LIKE` form, relying on the database's collation settings for case sensitivity.
+  - **Wildcards:** The filter `value` should include SQL `LIKE` wildcards (`%`, `_`) as needed, just like with the standard `LIKE` operator.
 
 ### 2.4. Return of `TypeOrmConditionFragment`
 
@@ -132,3 +234,7 @@ This section details the logic and reasons behind the translation of more comple
 - **Performance of JSON and SET/simple-array Queries:** Queries filtering by `JSON` or `SET` type fields (or `simple-array` mapping to string types) can have performance implications if the columns are not adequately indexed. MySQL 8.0+ offers better indexing capabilities for JSON data (e.g., indexes on JSON arrays or on virtual fields generated from JSON paths). The translator focuses on the functional correctness of the translation; performance optimization at the database schema level (defining appropriate indexes) is the responsibility of the developer using the library.
 - **Complexity of `ARRAY_EQUALS`:** As detailed earlier, the implementation of `ARRAY_EQUALS` checks for length equality and the presence of all elements but does not guarantee order. If strict ordered array equality is required, a different solution would be needed.
 - **Handling of `NULL` in Comparisons:** Most comparison operators (`=`, `<>`, `>`, etc.) when compared with `NULL` in SQL produce a `NULL` result (which in a boolean context is treated as false). The `IS_NULL` and `IS_NOT_NULL` operators are specifically designed to check for nullity. The logic for `SET_CONTAINS` and `SET_NOT_CONTAINS` explicitly includes `IS NULL` / `IS NOT NULL` checks for intuitive behavior. For other operators, standard SQL behavior with `NULL`s applies.
+
+```
+
+```

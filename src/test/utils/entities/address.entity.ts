@@ -1,6 +1,6 @@
 import { EntitySchema } from 'typeorm';
 import { BaseColumnSchemaPart, BaseIndexUuidCreatedAt } from './entity-base.js';
-import type { Address } from '../../test/fake/fake-entities.js';
+import type { Address } from '../fake-entities.js';
 
 export const AddressEntity = new EntitySchema<Address>({
   indices: BaseIndexUuidCreatedAt('address'),
@@ -13,7 +13,6 @@ export const AddressEntity = new EntitySchema<Address>({
       length: 400,
     },
   },
-  // relationIds: { user: { relationName: 'user', alias: 'user' } },
   relations: {
     user: {
       joinColumn: {

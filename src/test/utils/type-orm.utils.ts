@@ -1,5 +1,10 @@
-import { DataSource, type EntitySchema, type QueryRunner } from 'typeorm';
-import { type EntityBase, generateFakeData } from './fake-entities.js';
+import {
+  DataSource,
+  type EntitySchema,
+  type ObjectLiteral,
+  type QueryRunner,
+} from 'typeorm';
+import { generateFakeData } from './fake-entities.js';
 import { initializeDatabase } from './mysql.utils.js';
 import 'dotenv/config';
 import { EventEntitySchema } from './entities/event.entity.js';
@@ -8,6 +13,7 @@ import { UserEntity } from './entities/user.entity.js';
 import { AddressEntity } from './entities/address.entity.js';
 import { PostEntity } from './entities/post.entity.js';
 import { PermissionEntity } from './entities/permission.entity.js';
+import { UserProfileEntity } from './entities/user-profile.entity.js';
 
 const dbHost = process.env.MYSQL_HOST || '';
 const dbPort = parseInt(process.env.MYSQL_PORT || '', 10);
@@ -29,6 +35,7 @@ export const DbDatasourceConfigForGlobalSetup = {
     PermissionEntity,
     PostCommentEntity,
     EventEntitySchema,
+    UserProfileEntity,
   ],
   synchronize: true,
   cache: false,
@@ -90,6 +97,7 @@ export async function seedDatabaseService() {
     await manager.getRepository(EventEntitySchema).deleteAll();
     await manager.getRepository(PostEntity).deleteAll();
     await manager.getRepository(AddressEntity).deleteAll();
+    await manager.getRepository(UserProfileEntity).deleteAll();
     await manager.getRepository(UserEntity).deleteAll();
     await manager.getRepository(PermissionEntity).deleteAll();
 
@@ -131,7 +139,7 @@ export async function teardownDataSourceService() {
 }
 
 export class TypeORMUtils {
-  static async getQueryBuilderFor<T extends EntityBase>(
+  static async getQueryBuilderFor<T extends ObjectLiteral>(
     entitySchema: EntitySchema<T>,
     alias: string,
   ) {

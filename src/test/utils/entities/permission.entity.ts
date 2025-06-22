@@ -1,5 +1,5 @@
 import { EntitySchema } from 'typeorm';
-import type { Permission } from '../../test/fake/fake-entities.js';
+import type { Permission } from '../fake-entities.js';
 import { BaseColumnSchemaPart, BaseIndexUuidCreatedAt } from './entity-base.js';
 
 export const PermissionEntity = new EntitySchema<Permission>({

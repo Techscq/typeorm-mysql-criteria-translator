@@ -1,5 +1,5 @@
 import { EntitySchema } from 'typeorm';
-import type { User } from '../../test/fake/fake-entities.js';
+import type { User } from '../fake-entities.js';
 import { BaseColumnSchemaPart, BaseIndexUuidCreatedAt } from './entity-base.js';
 
 export const UserEntity = new EntitySchema<User>({
@@ -17,6 +17,7 @@ export const UserEntity = new EntitySchema<User>({
       length: 60,
     },
   },
+
   relations: {
     addresses: {
       inverseSide: 'user',
@@ -48,6 +49,14 @@ export const UserEntity = new EntitySchema<User>({
       target: 'Post',
       eager: false,
       cascade: false,
+    },
+    profile: {
+      type: 'one-to-one',
+      target: 'UserProfile',
+      inverseSide: 'user',
+      cascade: ['insert', 'update'],
+      nullable: true,
+      eager: false,
     },
   },
 });

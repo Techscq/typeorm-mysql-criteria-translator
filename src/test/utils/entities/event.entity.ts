@@ -1,4 +1,4 @@
-import type { DomainEvent } from '../../test/fake/fake-entities.js';
+import type { DomainEvent } from '../fake-entities.js';
 import { EntitySchema } from 'typeorm';
 
 export const EventEntitySchema = new EntitySchema<DomainEvent<any>>({

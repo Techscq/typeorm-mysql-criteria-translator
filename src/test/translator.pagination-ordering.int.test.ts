@@ -26,27 +26,27 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
 
   beforeAll(async () => {
     const dataSource = await initializeDataSourceService(false);
-    // Pre-sort data to match expected database order for pagination tests
     actualUsersFromDB = (
-      await dataSource.getRepository(UserEntity).find({
-        // No eager loading needed if only testing root entity pagination
-      })
-    ).sort((a, b) => a.email.localeCompare(b.email)); // Ensure consistent order for tests
+      await dataSource.getRepository(UserEntity).find()
+    ).sort((a, b) => a.email.localeCompare(b.email));
 
     actualPostsFromDB = (
       await dataSource.getRepository(PostEntity).find({
-        relations: ['publisher'], // publisher is needed for sorting by publisher.username
+        relations: ['publisher'],
       })
     ).sort((a, b) => {
-      // Complex sort to match 'orderBy uuid ASC, publisher.username DESC'
-      const uuidComparison = a.uuid.localeCompare(b.uuid);
-      if (uuidComparison !== 0) return uuidComparison;
       if (a.publisher && b.publisher) {
-        return b.publisher.username.localeCompare(a.publisher.username);
+        const usernameComparison = b.publisher.username.localeCompare(
+          a.publisher.username,
+        );
+        if (usernameComparison !== 0) return usernameComparison;
+      } else if (a.publisher) {
+        return -1;
+      } else if (b.publisher) {
+        return 1;
       }
-      if (a.publisher) return -1; // Posts with publishers first (if DESC on publisher)
-      if (b.publisher) return 1;
-      return 0;
+
+      return a.uuid.localeCompare(b.uuid);
     });
   });
 
@@ -55,7 +55,6 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
   });
 
   it('should fetch root entities with orderBy, take, and skip', async () => {
-    const userAlias = CriteriaUserSchema.alias[0];
     const take = 2;
     const skip = 1;
 
@@ -67,27 +66,24 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
       );
     }
 
-    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema, userAlias)
+    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .orderBy('email', OrderDirection.ASC)
       .setTake(take)
       .setSkip(skip);
 
     const qb = await TypeORMUtils.getQueryBuilderFor<User>(
       UserEntity,
-      userAlias,
+      criteria.alias,
     );
     translator.translate(criteria, qb);
     const fetchedUsers = await qb.getMany();
 
     expect(fetchedUsers).toHaveLength(take);
-    // Compare against pre-sorted actualUsersFromDB
     expect(fetchedUsers[0]!.uuid).toBe(actualUsersFromDB[skip]!.uuid);
     expect(fetchedUsers[1]!.uuid).toBe(actualUsersFromDB[skip + 1]!.uuid);
   });
 
   it('should fetch entities ordered by a field in a joined table with pagination', async () => {
-    const postAlias = CriteriaPostSchema.alias[0];
-    const publisherAlias = 'publisher';
     const take = 3;
     const skip = 0;
 
@@ -95,40 +91,27 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
     if (postsWithPublisher.length === 0) {
       throw new Error('Test data issue: No posts with publishers found in DB.');
     }
-    // The actualPostsFromDB is already sorted as per the complex criteria for this test in beforeAll
     const sortedPostsForThisTest = postsWithPublisher;
 
-    if (
-      sortedPostsForThisTest.length < skip + take &&
-      sortedPostsForThisTest.length > 0
-    ) {
-      // This condition is more of a data health check, the test should still run
-      console.warn(
-        // Kept as warn because the test can still proceed with fewer items
-        `Data health: Not enough posts with publishers for full pagination check (skip ${skip}, take ${take}, have ${sortedPostsForThisTest.length}). Assertions might be partial.`,
-      );
-    }
+    const publisherJoinCriteria = CriteriaFactory.GetInnerJoinCriteria(
+      CriteriaUserSchema,
+    ).orderBy('username', OrderDirection.DESC);
 
-    const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema, postAlias)
-      .orderBy('uuid', OrderDirection.ASC) // Primary sort on root
-      .join(
-        CriteriaFactory.GetInnerJoinCriteria(
-          CriteriaUserSchema,
-          publisherAlias,
-        ).orderBy('username', OrderDirection.DESC), // Secondary sort on join
-        {
-          parent_field: 'user_uuid',
-          join_field: 'uuid',
-        },
-      )
+    const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema)
+      .orderBy('uuid', OrderDirection.ASC)
+      .join('publisher', publisherJoinCriteria, {
+        parent_field: 'user_uuid',
+        join_field: 'uuid',
+      })
       .setTake(take)
       .setSkip(skip);
 
     const qb = await TypeORMUtils.getQueryBuilderFor<Post>(
       PostEntity,
-      postAlias,
+      criteria.alias,
     );
     translator.translate(criteria, qb);
+
     const fetchedPosts = await qb.getMany();
 
     const expectedSlice = sortedPostsForThisTest.slice(skip, skip + take);
@@ -146,14 +129,13 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
   });
 
   it('should fetch root entities using cursor-based pagination (created_at ASC, uuid ASC)', async () => {
-    const userAlias = CriteriaUserSchema.alias[0];
     const pageSize = 2;
 
     const sortedUsersForCursor = [...actualUsersFromDB].sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
-      if (dateA !== dateB) return dateA - dateB; // ASC on created_at
-      return a.uuid.localeCompare(b.uuid); // ASC on uuid
+      if (dateA !== dateB) return dateA - dateB;
+      return a.uuid.localeCompare(b.uuid);
     });
 
     if (sortedUsersForCursor.length < pageSize) {
@@ -162,17 +144,14 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
       );
     }
 
-    const criteriaPage1 = CriteriaFactory.GetCriteria(
-      CriteriaUserSchema,
-      userAlias,
-    )
+    const criteriaPage1 = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .orderBy('created_at', OrderDirection.ASC)
       .orderBy('uuid', OrderDirection.ASC)
       .setTake(pageSize);
 
     const qbPage1 = await TypeORMUtils.getQueryBuilderFor<User>(
       UserEntity,
-      userAlias,
+      criteriaPage1.alias,
     );
     translator.translate(criteriaPage1, qbPage1);
     const page1Users = await qbPage1.getMany();
@@ -185,16 +164,14 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
     }
     const lastUserPage1 = page1Users[page1Users.length - 1]!;
 
-    const criteriaPage2 = CriteriaFactory.GetCriteria(
-      CriteriaUserSchema,
-      userAlias,
-    )
+    const criteriaPage2 = CriteriaFactory.GetCriteria(CriteriaUserSchema);
+    criteriaPage2
       .setCursor(
         [
           { field: 'created_at', value: lastUserPage1.created_at },
           { field: 'uuid', value: lastUserPage1.uuid },
         ],
-        FilterOperator.GREATER_THAN, // For ASC, next page is GREATER_THAN
+        FilterOperator.GREATER_THAN,
         OrderDirection.ASC,
       )
       .orderBy('created_at', OrderDirection.ASC)
@@ -203,7 +180,7 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
 
     const qbPage2 = await TypeORMUtils.getQueryBuilderFor<User>(
       UserEntity,
-      userAlias,
+      criteriaPage2.alias,
     );
     translator.translate(criteriaPage2, qbPage2);
     const page2Users = await qbPage2.getMany();
@@ -211,7 +188,7 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
     expect(page2Users.length).toBeLessThanOrEqual(pageSize);
     if (page2Users.length > 0) {
       const firstUserPage2 = page2Users[0]!;
-      const expectedNextUser = sortedUsersForCursor[pageSize]; // The first user of the "next page" from our sorted list
+      const expectedNextUser = sortedUsersForCursor[pageSize];
 
       expect(firstUserPage2.uuid).toBe(expectedNextUser?.uuid);
       expect(
@@ -221,14 +198,13 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
   });
 
   it('should fetch root entities using cursor-based pagination (created_at DESC, uuid DESC)', async () => {
-    const userAlias = CriteriaUserSchema.alias[0];
     const pageSize = 2;
 
     const sortedUsersForCursorDesc = [...actualUsersFromDB].sort((a, b) => {
       const dateA = new Date(a.created_at).getTime();
       const dateB = new Date(b.created_at).getTime();
-      if (dateA !== dateB) return dateB - dateA; // DESC on created_at
-      return b.uuid.localeCompare(a.uuid); // DESC on uuid
+      if (dateA !== dateB) return dateB - dateA;
+      return b.uuid.localeCompare(a.uuid);
     });
 
     if (sortedUsersForCursorDesc.length < pageSize) {
@@ -237,17 +213,14 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
       );
     }
 
-    const criteriaPage1Desc = CriteriaFactory.GetCriteria(
-      CriteriaUserSchema,
-      userAlias,
-    )
+    const criteriaPage1Desc = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .orderBy('created_at', OrderDirection.DESC)
       .orderBy('uuid', OrderDirection.DESC)
       .setTake(pageSize);
 
     const qbPage1Desc = await TypeORMUtils.getQueryBuilderFor<User>(
       UserEntity,
-      userAlias,
+      criteriaPage1Desc.alias,
     );
     translator.translate(criteriaPage1Desc, qbPage1Desc);
     const page1UsersDesc = await qbPage1Desc.getMany();
@@ -264,16 +237,14 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
     }
     const lastUserPage1Desc = page1UsersDesc[page1UsersDesc.length - 1]!;
 
-    const criteriaPage2Desc = CriteriaFactory.GetCriteria(
-      CriteriaUserSchema,
-      userAlias,
-    )
+    const criteriaPage2Desc = CriteriaFactory.GetCriteria(CriteriaUserSchema);
+    criteriaPage2Desc
       .setCursor(
         [
           { field: 'created_at', value: lastUserPage1Desc.created_at },
           { field: 'uuid', value: lastUserPage1Desc.uuid },
         ],
-        FilterOperator.LESS_THAN, // For DESC, next page is LESS_THAN
+        FilterOperator.LESS_THAN,
         OrderDirection.DESC,
       )
       .orderBy('created_at', OrderDirection.DESC)
@@ -282,7 +253,7 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
 
     const qbPage2Desc = await TypeORMUtils.getQueryBuilderFor<User>(
       UserEntity,
-      userAlias,
+      criteriaPage2Desc.alias,
     );
     translator.translate(criteriaPage2Desc, qbPage2Desc);
     const page2UsersDesc = await qbPage2Desc.getMany();
@@ -290,7 +261,7 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
     expect(page2UsersDesc.length).toBeLessThanOrEqual(pageSize);
     if (page2UsersDesc.length > 0) {
       const firstUserPage2Desc = page2UsersDesc[0]!;
-      const expectedNextUser = sortedUsersForCursorDesc[pageSize]; // The first user of the "next page"
+      const expectedNextUser = sortedUsersForCursorDesc[pageSize];
 
       expect(firstUserPage2Desc.uuid).toBe(expectedNextUser?.uuid);
       expect(

@@ -3,7 +3,6 @@ import {
   CriteriaTranslator,
   type CriteriaSchema,
   type JoinRelationType,
-  type SelectedAliasOf,
   type RootCriteria,
   FilterOperator,
   LogicalOperator,
@@ -13,7 +12,6 @@ import {
   type OuterJoinCriteria,
   type PivotJoin,
   type SimpleJoin,
-  type Order,
   InnerJoinCriteria,
 } from '@nulledexp/translatable-criteria';
 
@@ -32,195 +30,138 @@ export class TypeOrmMysqlTranslator<
   SelectQueryBuilder<T>,
   TypeOrmConditionFragment
 > {
-  private parameterManager: TypeOrmParameterManager;
-  private filterFragmentBuilder: TypeOrmFilterFragmentBuilder;
-  private queryStructureHelper: TypeOrmQueryStructureHelper<T>;
-  private joinApplier: TypeOrmJoinApplier<T>;
+  private _parameterManager: TypeOrmParameterManager;
+  private _filterFragmentBuilder: TypeOrmFilterFragmentBuilder;
+  private _queryStructureHelper: TypeOrmQueryStructureHelper<T>;
+  private _joinApplier: TypeOrmJoinApplier<T>;
 
   constructor() {
     super();
-    this.parameterManager = new TypeOrmParameterManager();
-    this.filterFragmentBuilder = new TypeOrmFilterFragmentBuilder(
-      this.parameterManager,
+    this._parameterManager = new TypeOrmParameterManager();
+    this._filterFragmentBuilder = new TypeOrmFilterFragmentBuilder(
+      this._parameterManager,
     );
-    this.queryStructureHelper = new TypeOrmQueryStructureHelper<T>(
-      this.parameterManager,
-      this.filterFragmentBuilder,
+    this._queryStructureHelper = new TypeOrmQueryStructureHelper<T>(
+      this._parameterManager,
+      this._filterFragmentBuilder,
     );
-    this.joinApplier = new TypeOrmJoinApplier<T>(this.queryStructureHelper);
+    this._joinApplier = new TypeOrmJoinApplier<T>(this._queryStructureHelper);
   }
 
-  visitFilter<FieldType extends string, Operator extends FilterOperator>(
+  public override translate<RootCriteriaSchema extends CriteriaSchema>(
+    criteria: RootCriteria<RootCriteriaSchema>,
+    source: SelectQueryBuilder<T>,
+  ): SelectQueryBuilder<T> {
+    this._queryStructureHelper.reset();
+    this._queryStructureHelper.resolveSelects(criteria.alias, criteria);
+    criteria.accept(this, source);
+    this._queryStructureHelper.collectCursor(criteria.alias, criteria.cursor);
+
+    this._queryStructureHelper.recordOrderBy(criteria.orders, criteria.alias);
+
+    if (criteria.take > 0) {
+      source.take(criteria.take);
+    }
+    if (criteria.skip > 0 && !criteria.cursor) {
+      source.skip(criteria.skip);
+    }
+
+    for (const joinDetail of criteria.joins) {
+      joinDetail.criteria.accept(this, joinDetail.parameters, source);
+    }
+
+    this._queryStructureHelper.applyCollectedCursors(source);
+    this._queryStructureHelper.applyOrderByToBuilder(source);
+    this._queryStructureHelper.applySelectsToBuilder(source);
+
+    return source;
+  }
+
+  public visitFilter<FieldType extends string, Operator extends FilterOperator>(
     filter: Filter<FieldType, Operator>,
     currentAlias: string,
   ): TypeOrmConditionFragment {
-    return this.filterFragmentBuilder.build(filter, currentAlias);
+    return this._filterFragmentBuilder.build(filter, currentAlias);
   }
 
-  private selects: Set<string> = new Set<string>([]);
-  private orderBy: Array<[SelectedAliasOf<CriteriaSchema>, Order<any>]> = [];
-
-  visitRoot<
-    RootCriteriaSchema extends CriteriaSchema,
-    RootAlias extends SelectedAliasOf<RootCriteriaSchema>,
-  >(
-    criteria: RootCriteria<RootCriteriaSchema, RootAlias>,
+  public visitRoot<RootCriteriaSchema extends CriteriaSchema>(
+    criteria: RootCriteria<RootCriteriaSchema>,
     qb: SelectQueryBuilder<T>,
-  ): SelectQueryBuilder<T> {
-    this.parameterManager.reset();
-    this.selects = new Set<string>([]);
-    this.orderBy = [];
-    this.queryStructureHelper.resolveSelects(criteria, this.selects);
-    let mainWhereClauseApplied = false;
-
+  ): void {
     if (criteria.rootFilterGroup.items.length > 0) {
       qb.where(
         new Brackets((bracketQb) => {
           criteria.rootFilterGroup.accept(this, criteria.alias, bracketQb);
         }),
       );
-      mainWhereClauseApplied = true;
     }
-
-    if (criteria.cursor) {
-      const cursorCondition = this.queryStructureHelper.buildCursorCondition(
-        criteria.cursor,
-        criteria.alias,
-      );
-      if (mainWhereClauseApplied) {
-        qb.andWhere(
-          new Brackets((bracketQb) => {
-            bracketQb.where(
-              cursorCondition.queryFragment,
-              cursorCondition.parameters,
-            );
-          }),
-        );
-      } else {
-        qb.where(
-          new Brackets((bracketQb) => {
-            bracketQb.where(
-              cursorCondition.queryFragment,
-              cursorCondition.parameters,
-            );
-          }),
-        );
-      }
-      for (const [index, filter] of criteria.cursor.filters.entries()) {
-        const orderByField = `${criteria.alias}.${String(filter.field)}`;
-        if (index === 0) qb.orderBy(orderByField, criteria.cursor.order);
-        else qb.addOrderBy(orderByField, criteria.cursor.order);
-      }
-    }
-
-    criteria.orders.forEach((order) => {
-      this.orderBy.push([criteria.alias, order]);
-    });
-
-    if (criteria.take > 0) qb.take(criteria.take);
-    if (criteria.skip > 0 && !criteria.cursor) qb.skip(criteria.skip);
-
-    for (const joinDetail of criteria.joins) {
-      joinDetail.criteria.accept(this, joinDetail.parameters, qb);
-    }
-
-    this.orderBy.sort((a, b) => a[1].sequenceId - b[1].sequenceId);
-    for (const [index, [alias, order]] of this.orderBy.entries()) {
-      if (index === 0 && !criteria.cursor) {
-        qb.orderBy(`${alias}.${order.field}`, order.direction);
-      } else {
-        qb.addOrderBy(`${alias}.${order.field}`, order.direction);
-      }
-    }
-    return qb.select(Array.from(this.selects.values()));
   }
 
-  visitAndGroup<FieldType extends string>(
+  public visitAndGroup<FieldType extends string>(
     group: FilterGroup<FieldType>,
     currentAlias: string,
     qb: SelectQueryBuilder<T>,
-  ): SelectQueryBuilder<T> {
-    this.queryStructureHelper.processGroupItems(
+  ) {
+    this._queryStructureHelper.processGroupItems(
       group.items,
       currentAlias,
       qb,
       LogicalOperator.AND,
       this,
     );
-    return qb;
   }
 
-  visitOrGroup<FieldType extends string>(
+  public visitOrGroup<FieldType extends string>(
     group: FilterGroup<FieldType>,
     currentAlias: string,
     qb: SelectQueryBuilder<T>,
-  ): SelectQueryBuilder<T> {
-    this.queryStructureHelper.processGroupItems(
+  ) {
+    this._queryStructureHelper.processGroupItems(
       group.items,
       currentAlias,
       qb,
       LogicalOperator.OR,
       this,
     );
-    return qb;
   }
 
-  visitInnerJoin<
+  public visitInnerJoin<
     ParentCSchema extends CriteriaSchema,
     JoinCriteriaSchema extends CriteriaSchema,
-    JoinAlias extends SelectedAliasOf<JoinCriteriaSchema>,
   >(
-    criteria: InnerJoinCriteria<JoinCriteriaSchema, JoinAlias>,
+    criteria: InnerJoinCriteria<JoinCriteriaSchema>,
     parameters:
       | PivotJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>
       | SimpleJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>,
     qb: SelectQueryBuilder<T>,
-  ): SelectQueryBuilder<T> {
-    this.joinApplier.applyJoinLogic(
-      qb,
-      'inner',
-      criteria,
-      parameters,
-      this.selects,
-      this.orderBy,
-    );
+  ) {
+    this._joinApplier.applyJoinLogic(qb, 'inner', criteria, parameters);
     for (const joinDetail of criteria.joins) {
       joinDetail.criteria.accept(this, joinDetail.parameters, qb);
     }
-    return qb;
   }
 
-  visitLeftJoin<
+  public visitLeftJoin<
     ParentCSchema extends CriteriaSchema,
     JoinCriteriaSchema extends CriteriaSchema,
-    JoinAlias extends SelectedAliasOf<JoinCriteriaSchema>,
   >(
-    criteria: LeftJoinCriteria<JoinCriteriaSchema, JoinAlias>,
+    criteria: LeftJoinCriteria<JoinCriteriaSchema>,
     parameters:
       | PivotJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>
       | SimpleJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>,
     qb: SelectQueryBuilder<T>,
-  ): SelectQueryBuilder<T> {
-    this.joinApplier.applyJoinLogic(
-      qb,
-      'left',
-      criteria,
-      parameters,
-      this.selects,
-      this.orderBy,
-    );
+  ) {
+    this._joinApplier.applyJoinLogic(qb, 'left', criteria, parameters);
     for (const joinDetail of criteria.joins) {
       joinDetail.criteria.accept(this, joinDetail.parameters, qb);
     }
-    return qb;
   }
 
-  visitOuterJoin<
+  public visitOuterJoin<
     ParentCSchema extends CriteriaSchema,
     JoinCriteriaSchema extends CriteriaSchema,
-    JoinAlias extends SelectedAliasOf<JoinCriteriaSchema>,
   >(
-    _criteria: OuterJoinCriteria<JoinCriteriaSchema, JoinAlias>,
+    _criteria: OuterJoinCriteria<JoinCriteriaSchema>,
     _parameters:
       | PivotJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>
       | SimpleJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>,

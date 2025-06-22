@@ -1,9 +1,15 @@
+import {
+  EntityNotFoundError,
+  type ObjectLiteral,
+  type EntitySchema,
+  type SelectQueryBuilder,
+} from 'typeorm';
 import { TypeOrmMysqlTranslator } from '../type-orm.mysql.translator.js';
-import { EntityNotFoundError, type ObjectLiteral } from 'typeorm';
 import {
   CriteriaFactory,
   FilterOperator,
   OrderDirection,
+  type RootCriteria,
 } from '@nulledexp/translatable-criteria';
 import {
   initializeDataSourceService,
@@ -16,6 +22,7 @@ import {
   type User,
   type Post,
   type Comment,
+  type EntityBase,
 } from './utils/fake-entities.js';
 import { UserEntity } from './utils/entities/user.entity.js';
 import { PostEntity } from './utils/entities/post.entity.js';
@@ -26,9 +33,20 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
   let actualUsersFromDB: User[];
   let actualPostsFromDB: Post[];
 
+  async function translateAndGetQueryBuilder<E extends EntityBase>(
+    criteria: RootCriteria<any>,
+    entitySchema: EntitySchema<E>,
+  ): Promise<SelectQueryBuilder<E>> {
+    const qb = await TypeORMUtils.getQueryBuilderFor<E>(
+      entitySchema,
+      criteria.alias,
+    );
+    translator.translate(criteria, qb as SelectQueryBuilder<ObjectLiteral>);
+    return qb;
+  }
+
   beforeAll(async () => {
     const dataSource = await initializeDataSourceService(false);
-    // Eager load necessary relations for the tests in this suite
     actualUsersFromDB = await dataSource
       .getRepository(UserEntity)
       .find({ relations: ['posts', 'permissions', 'addresses'] });
@@ -42,11 +60,8 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
   });
 
   it('should fetch all users matching fakeUsers data using getMany()', async () => {
-    const alias = CriteriaUserSchema.alias[0];
-    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema, alias);
-
-    const qb = await TypeORMUtils.getQueryBuilderFor<User>(UserEntity, alias);
-    translator.translate(criteria, qb);
+    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema);
+    const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
     const fetchedUsers = await qb.getMany();
 
     expect(fetchedUsers.length).toBe(actualUsersFromDB.length);
@@ -55,13 +70,11 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       expect(found, `User ${expectedUser.uuid} not found`).toBeDefined();
       if (found) {
         expect(found.email).toBe(expectedUser.email);
-        // Add more checks for other fields if necessary
       }
     });
   });
 
   it('should fetch users filtered by email using getMany()', async () => {
-    const alias = CriteriaUserSchema.alias[0];
     const targetEmail = 'user1@example.com';
     const targetUserFromDB = actualUsersFromDB.find(
       (u) => u.email === targetEmail,
@@ -73,17 +86,13 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       );
     }
 
-    const criteria = CriteriaFactory.GetCriteria(
-      CriteriaUserSchema,
-      alias,
-    ).where({
+    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema).where({
       field: 'email',
       operator: FilterOperator.EQUALS,
       value: targetUserFromDB.email,
     });
 
-    const qb = await TypeORMUtils.getQueryBuilderFor<User>(UserEntity, alias);
-    translator.translate(criteria, qb);
+    const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
     const fetchedUsers = await qb.getMany();
 
     expect(fetchedUsers).toHaveLength(1);
@@ -92,9 +101,6 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
   });
 
   it('should fetch posts with their publisher (user) using INNER JOIN and getMany()', async () => {
-    const postCriteriaRootAlias = CriteriaPostSchema.alias[0];
-    const publisherRelationJoinAlias = 'publisher'; // Matches alias in PostSchema for publisher join
-
     const targetPublisherUsername = 'user_1';
     const postWithTargetPublisherFromDB = actualPostsFromDB.find(
       (p) => p.publisher?.username === targetPublisherUsername,
@@ -109,31 +115,22 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       );
     }
 
-    const criteria = CriteriaFactory.GetCriteria(
-      CriteriaPostSchema,
-      postCriteriaRootAlias,
-    )
+    const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema)
       .join(
-        CriteriaFactory.GetInnerJoinCriteria(
-          CriteriaUserSchema,
-          publisherRelationJoinAlias,
-        ),
+        'publisher',
+        CriteriaFactory.GetInnerJoinCriteria(CriteriaUserSchema),
         {
-          parent_field: 'user_uuid', // Field in Post table
-          join_field: 'uuid', // Field in User table
+          parent_field: 'user_uuid',
+          join_field: 'uuid',
         },
       )
       .where({
-        field: 'uuid', // Filter on the root Post entity
+        field: 'uuid',
         operator: FilterOperator.EQUALS,
         value: postWithTargetPublisherFromDB.uuid,
       });
 
-    const qb = await TypeORMUtils.getQueryBuilderFor<Post>(
-      PostEntity,
-      postCriteriaRootAlias,
-    );
-    translator.translate(criteria, qb);
+    const qb = await translateAndGetQueryBuilder<Post>(criteria, PostEntity);
     const fetchedPosts = await qb.getMany();
 
     expect(fetchedPosts).toHaveLength(1);
@@ -151,7 +148,6 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
   });
 
   it('should fetch root entities with complex nested AND/OR filters (hydration check)', async () => {
-    const userAlias = CriteriaUserSchema.alias[0];
     const user1 = actualUsersFromDB.find((u) => u.username === 'user_1');
     const user2 = actualUsersFromDB.find((u) => u.username === 'user_2');
 
@@ -161,7 +157,7 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       );
     }
 
-    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema, userAlias)
+    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .where({
         field: 'email',
         operator: FilterOperator.CONTAINS,
@@ -178,31 +174,25 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
         value: user2.email.substring(0, user2.email.indexOf('@')),
       })
       .andWhere({
-        // This AND applies to the preceding OR group's last item
         field: 'username',
         operator: FilterOperator.EQUALS,
         value: user2.username,
       })
       .orderBy('email', OrderDirection.ASC);
 
-    const qb = await TypeORMUtils.getQueryBuilderFor<User>(
-      UserEntity,
-      userAlias,
-    );
-    translator.translate(criteria, qb);
+    const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
     const fetchedUsers = await qb.getMany();
 
-    // Based on the logic (email1 AND username1) OR (email2 AND username2)
     const expectedUsers = actualUsersFromDB
       .filter(
         (u) =>
           (u.email.includes(
-            user1.email.substring(0, user1.email.indexOf('@')),
-          ) &&
+              user1.email.substring(0, user1.email.indexOf('@')),
+            ) &&
             u.username === user1.username) ||
           (u.email.includes(
-            user2.email.substring(0, user2.email.indexOf('@')),
-          ) &&
+              user2.email.substring(0, user2.email.indexOf('@')),
+            ) &&
             u.username === user2.username),
       )
       .sort((a, b) => a.email.localeCompare(b.email));
@@ -214,8 +204,6 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
   });
 
   it('should fetch entities with INNER JOIN and complex ON condition filters (hydration check)', async () => {
-    const postAlias = CriteriaPostSchema.alias[0];
-    const publisherAlias = 'publisher';
     const user1 = actualUsersFromDB.find((u) => u.username === 'user_1');
     const user2 = actualUsersFromDB.find((u) => u.username === 'user_2');
 
@@ -225,9 +213,10 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       );
     }
 
-    const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema, postAlias)
+    const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema)
       .join(
-        CriteriaFactory.GetInnerJoinCriteria(CriteriaUserSchema, publisherAlias)
+        'publisher',
+        CriteriaFactory.GetInnerJoinCriteria(CriteriaUserSchema)
           .where({
             field: 'username',
             operator: FilterOperator.EQUALS,
@@ -239,13 +228,11 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
             value: user1.email.substring(0, user1.email.indexOf('@')),
           })
           .orWhere({
-            // This OR is for the publisher conditions
             field: 'username',
             operator: FilterOperator.EQUALS,
             value: user2.username,
           })
           .andWhere({
-            // This AND applies to the preceding OR group's last item (username = user2)
             field: 'email',
             operator: FilterOperator.CONTAINS,
             value: user2.email.substring(0, user2.email.indexOf('@')),
@@ -257,11 +244,7 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       )
       .orderBy('created_at', OrderDirection.ASC);
 
-    const qb = await TypeORMUtils.getQueryBuilderFor<Post>(
-      PostEntity,
-      postAlias,
-    );
-    translator.translate(criteria, qb);
+    const qb = await translateAndGetQueryBuilder<Post>(criteria, PostEntity);
     const fetchedPosts = await qb.getMany();
 
     expect(fetchedPosts.length).toBeGreaterThan(0);
@@ -275,7 +258,6 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
   });
 
   it('should fetch a single user by UUID using getOne()', async () => {
-    const alias = CriteriaUserSchema.alias[0];
     const targetUsername = 'user_2';
     const targetUserFromDB = actualUsersFromDB.find(
       (u) => u.username === targetUsername,
@@ -287,17 +269,13 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       );
     }
 
-    const criteria = CriteriaFactory.GetCriteria(
-      CriteriaUserSchema,
-      alias,
-    ).where({
+    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema).where({
       field: 'uuid',
       operator: FilterOperator.EQUALS,
       value: targetUserFromDB.uuid,
     });
 
-    const qb = await TypeORMUtils.getQueryBuilderFor<User>(UserEntity, alias);
-    translator.translate(criteria, qb);
+    const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
     const fetchedUser = await qb.getOne();
 
     expect(fetchedUser).not.toBeNull();
@@ -306,29 +284,21 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
   });
 
   it('should return null with getOne() if no user matches', async () => {
-    const alias = CriteriaUserSchema.alias[0];
     const nonExistentUuid = '00000000-0000-0000-0000-000000000000';
 
-    const criteria = CriteriaFactory.GetCriteria(
-      CriteriaUserSchema,
-      alias,
-    ).where({
+    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema).where({
       field: 'uuid',
       operator: FilterOperator.EQUALS,
       value: nonExistentUuid,
     });
 
-    const qb = await TypeORMUtils.getQueryBuilderFor<User>(UserEntity, alias);
-    translator.translate(criteria, qb);
+    const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
     const fetchedUser = await qb.getOne();
 
     expect(fetchedUser).toBeNull();
   });
 
   it('should fetch a post and its comments using LEFT JOIN and getOne()', async () => {
-    const postCriteriaRootAlias = CriteriaPostSchema.alias[0];
-    const commentsRelationJoinAlias = 'comments'; // Matches alias in PostSchema for comments join
-
     const targetPostTitle = 'Post Title 1';
     const targetPostWithCommentsFromDB = actualPostsFromDB.find(
       (p) => p.title === targetPostTitle && p.comments && p.comments.length > 0,
@@ -343,31 +313,22 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       );
     }
 
-    const criteria = CriteriaFactory.GetCriteria(
-      CriteriaPostSchema,
-      postCriteriaRootAlias,
-    )
+    const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema)
       .join(
-        CriteriaFactory.GetLeftJoinCriteria(
-          CriteriaCommentSchema,
-          commentsRelationJoinAlias,
-        ),
+        'comments',
+        CriteriaFactory.GetLeftJoinCriteria(CriteriaCommentSchema),
         {
-          parent_field: 'uuid', // Field in Post table
-          join_field: 'post_uuid', // Field in Comment table
+          parent_field: 'uuid',
+          join_field: 'post_uuid',
         },
       )
       .where({
-        field: 'uuid', // Filter on the root Post entity
+        field: 'uuid',
         operator: FilterOperator.EQUALS,
         value: targetPostWithCommentsFromDB.uuid,
       });
 
-    const qb = await TypeORMUtils.getQueryBuilderFor<Post>(
-      PostEntity,
-      postCriteriaRootAlias,
-    );
-    translator.translate(criteria, qb);
+    const qb = await translateAndGetQueryBuilder<Post>(criteria, PostEntity);
     const fetchedPost = await qb.getOne();
 
     expect(fetchedPost).not.toBeNull();
@@ -394,20 +355,15 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
   });
 
   it('should throw EntityNotFoundError with getOneOrFail() if no user matches', async () => {
-    const alias = CriteriaUserSchema.alias[0];
     const nonExistentUuid = '11111111-1111-1111-1111-111111111111';
 
-    const criteria = CriteriaFactory.GetCriteria(
-      CriteriaUserSchema,
-      alias,
-    ).where({
+    const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema).where({
       field: 'uuid',
       operator: FilterOperator.EQUALS,
       value: nonExistentUuid,
     });
 
-    const qb = await TypeORMUtils.getQueryBuilderFor<User>(UserEntity, alias);
-    translator.translate(criteria, qb);
+    const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
 
     await expect(qb.getOneOrFail()).rejects.toThrow(EntityNotFoundError);
   });

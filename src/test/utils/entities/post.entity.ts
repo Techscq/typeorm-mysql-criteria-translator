@@ -1,6 +1,7 @@
 import { EntitySchema } from 'typeorm';
-import type { Post } from '../../test/fake/fake-entities.js';
+
 import { BaseColumnSchemaPart, BaseIndexUuidCreatedAt } from './entity-base.js';
+import type { Post } from '../fake-entities.js';
 
 export const PostEntity = new EntitySchema<Post>({
   indices: BaseIndexUuidCreatedAt('post'),
@@ -12,9 +13,6 @@ export const PostEntity = new EntitySchema<Post>({
     title: { type: 'varchar', length: '400' },
     metadata: { type: 'json', nullable: true },
     categories: { type: 'simple-array', nullable: true },
-  },
-  relationIds: {
-    //publisher: { relationName: 'publisher', alias: 'publisher' },
   },
   relations: {
     publisher: {

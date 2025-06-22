@@ -6,30 +6,61 @@ export interface EntityBase {
   created_at: string;
 }
 
+export interface UserProfile extends EntityBase {
+  bio: string | null;
+  preferences: Record<string, any> | null;
+  user?: User;
+}
+
+export const UserProfileSchema = GetTypedCriteriaSchema({
+  source_name: 'user_profile',
+  alias: 'profile',
+  identifier_field: 'uuid',
+  fields: ['uuid', 'bio', 'preferences', 'created_at', 'user_uuid'],
+  joins: [
+    {
+      alias: 'user',
+      relation_type: 'many_to_one',
+      target_source_name: 'user',
+    },
+  ],
+});
+export type UserProfileSchema = typeof UserProfileSchema;
+
 export interface User extends EntityBase {
   email: string;
   username: string;
   addresses: Address[];
   permissions: Permission[];
   posts: Post[];
+  profile: UserProfile | null;
 }
 
 export const UserSchema = GetTypedCriteriaSchema({
   source_name: 'user',
-  alias: ['users', 'user', 'publisher'],
+  alias: 'users',
+  identifier_field: 'uuid',
   fields: ['uuid', 'email', 'username', 'created_at'],
   joins: [
     {
       alias: 'permissions',
-      join_relation_type: 'many_to_many',
+      relation_type: 'many_to_many',
+      target_source_name: 'permission',
     },
     {
       alias: 'addresses',
-      join_relation_type: 'one_to_many',
+      relation_type: 'one_to_many',
+      target_source_name: 'address',
     },
     {
       alias: 'posts',
-      join_relation_type: 'one_to_many',
+      relation_type: 'one_to_many',
+      target_source_name: 'post',
+    },
+    {
+      alias: 'profile',
+      relation_type: 'one_to_many',
+      target_source_name: 'user_profile',
     },
   ],
 });
@@ -51,7 +82,8 @@ export interface Post extends EntityBase {
 
 export const PostSchema = GetTypedCriteriaSchema({
   source_name: 'post',
-  alias: ['posts', 'post'],
+  alias: 'posts',
+  identifier_field: 'uuid',
   fields: [
     'uuid',
     'categories',
@@ -62,8 +94,16 @@ export const PostSchema = GetTypedCriteriaSchema({
     'metadata',
   ],
   joins: [
-    { alias: 'comments', join_relation_type: 'one_to_many' },
-    { alias: 'publisher', join_relation_type: 'many_to_one' },
+    {
+      alias: 'comments',
+      relation_type: 'one_to_many',
+      target_source_name: 'post_comment',
+    },
+    {
+      alias: 'publisher',
+      relation_type: 'many_to_one',
+      target_source_name: 'user',
+    },
   ],
 });
 export type PostSchema = typeof PostSchema;
@@ -76,11 +116,12 @@ export interface Comment extends EntityBase {
 
 export const PostCommentSchema = GetTypedCriteriaSchema({
   source_name: 'post_comment',
-  alias: ['comments', 'comment'],
+  alias: 'comments',
+  identifier_field: 'uuid',
   fields: ['uuid', 'comment_text', 'user_uuid', 'post_uuid', 'created_at'],
   joins: [
-    { alias: 'post', join_relation_type: 'many_to_one' },
-    { alias: 'user', join_relation_type: 'many_to_one' },
+    { alias: 'post', relation_type: 'many_to_one', target_source_name: 'post' },
+    { alias: 'user', relation_type: 'many_to_one', target_source_name: 'user' },
   ],
 });
 export type PostCommentSchema = typeof PostCommentSchema;
@@ -91,12 +132,14 @@ export interface Permission extends EntityBase {
 
 export const PermissionSchema = GetTypedCriteriaSchema({
   source_name: 'permission',
-  alias: ['permissions', 'permission'],
+  alias: 'permissions',
+  identifier_field: 'uuid',
   fields: ['uuid', 'name', 'created_at'],
   joins: [
     {
       alias: 'users',
-      join_relation_type: 'many_to_many',
+      relation_type: 'many_to_many',
+      target_source_name: 'user',
     },
   ],
 });
@@ -108,12 +151,14 @@ export interface Address extends EntityBase {
 
 export const AddressSchema = GetTypedCriteriaSchema({
   source_name: 'address',
-  alias: ['addresses', 'address'],
+  alias: 'addresses',
+  identifier_field: 'uuid',
   fields: ['uuid', 'direction', 'user_uuid', 'created_at'],
   joins: [
     {
       alias: 'user',
-      join_relation_type: 'many_to_one',
+      relation_type: 'many_to_one',
+      target_source_name: 'user',
     },
   ],
 });
@@ -163,7 +208,8 @@ export interface DomainEvent<T extends { [key: string]: any }> {
 
 export const DomainEventsSchema = GetTypedCriteriaSchema({
   source_name: 'event',
-  alias: ['event', 'events'],
+  alias: 'events',
+  identifier_field: 'id',
   fields: [
     'id',
     'event_type',
@@ -227,8 +273,25 @@ export function generateFakeData() {
       addresses: [],
       posts: [],
       permissions: userPermissions,
+      profile: null,
     });
   }
+
+  const userProfilesData: UserProfile[] = [];
+  usersData.forEach((user, index) => {
+    if (index < 5) {
+      const userProfile: UserProfile = {
+        uuid: uuidv4(),
+        bio: `Bio for ${user.username}`,
+        preferences:
+          index % 2 === 0 ? { theme: 'dark', notifications: 'email' } : null,
+        user: user,
+        created_at: generateSequentialCreatedAt(2),
+      };
+      userProfilesData.push(userProfile);
+      user.profile = userProfile;
+    }
+  });
 
   const addressesData: Address[] = [];
   usersData.forEach((user, index) => {
@@ -245,16 +308,68 @@ export function generateFakeData() {
     }
   });
 
+  function buildRandomPostCategories(): string[] | null {
+    const categoriesPool = [
+      'tech',
+      'news',
+      'sports',
+      'finance',
+      'lifestyle',
+      'travel',
+      'food',
+      'fashion',
+      'typeorm',
+    ];
+    const numCategoriesToSelect = Math.floor(
+      Math.random() * (categoriesPool.length / 2),
+    );
+    if (numCategoriesToSelect === 0) return null;
+
+    const selectedCategories: string[] = [];
+    const availableCategories = [...categoriesPool];
+    for (
+      let i = 0;
+      i < numCategoriesToSelect && availableCategories.length > 0;
+      i++
+    ) {
+      const randomIndex = Math.floor(
+        Math.random() * availableCategories.length,
+      );
+      selectedCategories.push(availableCategories.splice(randomIndex, 1)[0]!);
+    }
+    return selectedCategories.sort();
+  }
+
   const postsData: Post[] = [];
   for (let i = 0; i < 15; i++) {
     const publisherIndex = i % usersData.length;
+    let currentPostCategories: string[] | null;
+
+    if (i === 5 || i === 6) {
+      currentPostCategories = null;
+    } else if (i === 0) {
+      currentPostCategories = ['tech', 'typeorm', 'news'].sort();
+    } else if (i === 1) {
+      currentPostCategories = ['tech', 'sports', 'lifestyle'].sort();
+    } else if (i === 2) {
+      currentPostCategories = ['news', 'finance', 'typeorm'].sort();
+    } else if (i === 3) {
+      currentPostCategories = ['tech'];
+    } else if (i === 4) {
+      currentPostCategories = ['typeorm'];
+    } else {
+      currentPostCategories = buildRandomPostCategories();
+    }
+
     const post: Post = {
       uuid: uuidv4(),
       title: `Post Title ${i + 1}`,
-      body: `This is the body of post ${i + 1}. Authored by ${usersData[publisherIndex]!.username}.`,
+      body: `This is the body of post ${
+        i + 1
+      }. Authored by ${usersData[publisherIndex]!.username}.`,
       publisher: usersData[publisherIndex]!,
       comments: [],
-      categories: i % 3 === 0 ? ['tech', 'news', 'typeorm'] : null,
+      categories: currentPostCategories,
       created_at: generateSequentialCreatedAt(7),
       metadata:
         i % 4 === 0
@@ -265,11 +380,7 @@ export function generateFakeData() {
               extra: { source: 'import', quality: 'high' },
             }
           : i % 4 === 1
-            ? {
-                tags: [],
-                views: i * 50,
-                extra: { source: 'manual' },
-              }
+            ? { tags: [], views: i * 50, extra: { source: 'manual' } }
             : i % 4 === 2
               ? {
                   tags: [`tag${i}`, `common_tag`, `post_specific_${i}`],
@@ -295,7 +406,9 @@ export function generateFakeData() {
       const mainCommentUserIndex = (postIndex + i) % usersData.length;
       const mainComment: Comment = {
         uuid: uuidv4(),
-        comment_text: `Main comment ${i + 1} on "${post.title}" by ${usersData[mainCommentUserIndex]!.username}.`,
+        comment_text: `Main comment ${i + 1} on "${post.title}" by ${
+          usersData[mainCommentUserIndex]!.username
+        }.`,
         post: post,
         user: usersData[mainCommentUserIndex]!,
         created_at: generateSequentialCreatedAt(3),
@@ -306,7 +419,6 @@ export function generateFakeData() {
   });
 
   const domainEventsData: DomainEvent<any>[] = [];
-
   if (usersData[0]) {
     domainEventsData.push({
       event_type: EventType.User.Email.Changed,
@@ -326,7 +438,6 @@ export function generateFakeData() {
       direct_tags: [],
     });
   }
-
   if (postsData[0]) {
     domainEventsData.push({
       event_type: EventType.Post.WasCreated,
@@ -334,7 +445,7 @@ export function generateFakeData() {
         post_uuid: postsData[0].uuid,
         title: postsData[0].title,
         author_uuid: postsData[0].publisher.uuid,
-        categories: ['tech', 'news', 'typeorm'],
+        categories: postsData[0].categories,
         status: 'published',
         content_length: postsData[0].body.length,
         metadata: postsData[0].metadata,
@@ -363,7 +474,6 @@ export function generateFakeData() {
       direct_tags: null,
     });
   }
-
   domainEventsData.push({
     event_type: EventType.User.Permission.Changed,
     event_body: {
@@ -376,7 +486,6 @@ export function generateFakeData() {
     occurred_on: generateSequentialCreatedAt(1),
     direct_tags: ['permission', 'user_event'],
   });
-
   domainEventsData.push({
     event_type: EventType.Post.WasDisabled,
     event_body: {
@@ -395,6 +504,7 @@ export function generateFakeData() {
   return {
     fakePermissions: permissionsData,
     fakeUsers: usersData,
+    fakeUserProfiles: userProfilesData,
     fakeAddresses: addressesData,
     fakePosts: postsData,
     fakeComments: allCommentsData,
