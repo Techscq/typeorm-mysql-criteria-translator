@@ -283,7 +283,9 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
     });
     const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
 
-    expect(qb.getSql()).toContain(`WHERE (\`${criteria.alias}\`.\`email\` = ?)`);
+    expect(qb.getSql()).toContain(
+      `WHERE (\`${criteria.alias}\`.\`email\` = ?)`,
+    );
     expect(qb.getParameters()).toEqual({ param_0: testUser.email });
   });
 
@@ -412,10 +414,7 @@ describe('TypeOrmMysqlTranslator - Basic Filters', () => {
         'Test data setup issue: actualUsersFromDB needs at least 2 users for this test.',
       );
     }
-    const userIds = [
-      actualUsersFromDB[0]!.uuid,
-      actualUsersFromDB[1]!.uuid,
-    ];
+    const userIds = [actualUsersFromDB[0]!.uuid, actualUsersFromDB[1]!.uuid];
     const expectedUsers = actualUsersFromDB.filter((user) =>
       userIds.includes(user.uuid),
     );

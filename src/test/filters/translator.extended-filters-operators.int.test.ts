@@ -83,9 +83,9 @@ describe('TypeOrmMysqlTranslator - Extended Filter Operators', () => {
     expect(fetchedPosts.length).toBe(expectedPosts.length);
     fetchedPosts.forEach((fp) => {
       expect(fp.categories).not.toBeNull();
-      expect(
-        targetCategories.some((cat) => fp.categories!.includes(cat)),
-      ).toBe(true);
+      expect(targetCategories.some((cat) => fp.categories!.includes(cat))).toBe(
+        true,
+      );
     });
   });
 
@@ -255,7 +255,9 @@ describe('TypeOrmMysqlTranslator - Extended Filter Operators', () => {
     const params = qb.getParameters();
     const fetchedUsers = await qb.getMany();
 
-    expect(sql).toContain(`WHERE (\`${criteria.alias}\`.\`username\` REGEXP ?)`);
+    expect(sql).toContain(
+      `WHERE (\`${criteria.alias}\`.\`username\` REGEXP ?)`,
+    );
     expect(params['param_0']).toBe(regex);
     expect(fetchedUsers.length).toBe(expectedUsers.length);
     fetchedUsers.forEach((fetchedUser) => {

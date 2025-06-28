@@ -70,7 +70,6 @@ export async function initializeDataSourceService(
       await AppDataSource.initialize();
     } catch (e: any) {
       if (e.message?.includes('DataSource already initialized')) {
-
       } else {
         console.error(
           `Error during DataSource initialization (isGlobalSetup: ${isGlobalSetup}): `,

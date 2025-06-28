@@ -50,9 +50,7 @@ describe('TypeOrmMysqlTranslator - Simple Array (categories) Filters', () => {
       (p) => p.categories === null,
     );
     if (postsWithNullCategories.length === 0) {
-      throw new Error(
-        'Test data issue: No posts with NULL categories found.',
-      );
+      throw new Error('Test data issue: No posts with NULL categories found.');
     }
 
     const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema).where({

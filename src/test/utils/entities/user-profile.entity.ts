@@ -21,7 +21,7 @@ export const UserProfileEntity = new EntitySchema<UserProfile>({
     user: {
       type: 'one-to-one',
       target: 'User',
-      inverseSide:'profile_uuid',
+      inverseSide: 'profile_uuid',
       joinColumn: {
         name: 'user_uuid',
         referencedColumnName: 'uuid',

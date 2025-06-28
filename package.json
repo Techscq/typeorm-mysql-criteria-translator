@@ -30,6 +30,7 @@
     "prepublishOnly": "npm run build && npm run test"
   },
   "peerDependencies": {
+    "@nulledexp/translatable-criteria": "^2.0.0",
     "typeorm": "^0.3.0"
   },
   "devDependencies": {
@@ -65,8 +66,5 @@
   },
   "bugs": {
     "url": "https://github.com/Techscq/typeorm-mysql-criteria-translator/issues"
-  },
-  "dependencies": {
-    "@nulledexp/translatable-criteria": "file:nulledexp-translatable-criteria-next.tgz"
   }
 }

@@ -17,6 +17,7 @@ This design ensures that the logic for each operator is isolated, making the sys
 This translator supports a wide range of operators for different data types.
 
 ### Basic Comparison
+
 - `EQUALS` (`=`)
 - `NOT_EQUALS` (`!=`)
 - `GREATER_THAN` (`>`)
@@ -25,6 +26,7 @@ This translator supports a wide range of operators for different data types.
 - `LESS_THAN_OR_EQUALS` (`<=`)
 
 ### Text Search (LIKE)
+
 - `LIKE`: Direct `LIKE` comparison.
 - `NOT_LIKE`: Direct `NOT LIKE` comparison.
 - `CONTAINS`: Case-insensitive search for a substring (`LIKE '%value%'`).
@@ -34,25 +36,30 @@ This translator supports a wide range of operators for different data types.
 - `ILIKE` / `NOT_ILIKE`: Behave like `LIKE` / `NOT_LIKE`, relying on the database's collation for case sensitivity.
 
 ### Null Checks
+
 - `IS_NULL`: Checks if a field is `NULL`.
 - `IS_NOT_NULL`: Checks if a field is not `NULL`.
 
 ### Set and Range
+
 - `IN`: Checks if a field's value is within a given array.
 - `NOT_IN`: Checks if a field's value is not within a given array.
 - `BETWEEN`: Checks if a value is within an inclusive range.
 - `NOT_BETWEEN`: Checks if a value is outside an inclusive range.
 
 ### Regular Expressions
+
 - `MATCHES_REGEX`: Checks if a string field matches a given regular expression using MySQL's `REGEXP`.
 
 ### MySQL `SET` Type (for TypeORM `simple-array`)
+
 - `SET_CONTAINS`: Checks if a comma-separated string field contains a specific value.
 - `SET_NOT_CONTAINS`: Checks if a comma-separated string field does not contain a specific value.
 - `SET_CONTAINS_ANY`: Checks if the field contains at least one of the values from a given array.
 - `SET_CONTAINS_ALL`: Checks if the field contains all of the values from a given array.
 
 ### MySQL `JSON` Type
+
 - `JSON_CONTAINS`: Checks if a JSON object in the database contains all the key-value pairs from a given filter object.
 - `JSON_PATH_VALUE_EQUALS`: Checks if the value at a specific path within a JSON object equals a given value.
 - `ARRAY_CONTAINS_ELEMENT`: Checks if a JSON array contains a specific element.
