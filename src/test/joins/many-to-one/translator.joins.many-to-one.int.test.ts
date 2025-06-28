@@ -59,10 +59,7 @@ describe('TypeOrmMysqlTranslator - Many-to-One Join Translation', () => {
       value: `%${usernamePart}%`,
     });
 
-    rootCriteria.join('publisher', publisherJoinCriteria, {
-      parent_field: 'user_uuid',
-      join_field: 'uuid',
-    });
+    rootCriteria.join('publisher', publisherJoinCriteria);
 
     const qb = await TypeORMUtils.getQueryBuilderFor<Post>(
       PostEntity,
@@ -86,7 +83,7 @@ describe('TypeOrmMysqlTranslator - Many-to-One Join Translation', () => {
       (p) =>
         p.publisher &&
         ((p.publisher.username.includes('user') &&
-            p.publisher.email.includes('example.com')) ||
+          p.publisher.email.includes('example.com')) ||
           p.publisher.username === 'user_2'),
     );
 
@@ -121,10 +118,7 @@ describe('TypeOrmMysqlTranslator - Many-to-One Join Translation', () => {
         value: 'user_2',
       });
 
-    rootCriteria.join('publisher', publisherJoinCriteria, {
-      parent_field: 'user_uuid',
-      join_field: 'uuid',
-    });
+    rootCriteria.join('publisher', publisherJoinCriteria);
 
     const qb = await TypeORMUtils.getQueryBuilderFor<Post>(
       PostEntity,

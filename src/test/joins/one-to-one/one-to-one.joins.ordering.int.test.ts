@@ -107,10 +107,7 @@ describe('TypeOrmMysqlTranslator - Ordering with One-to-One Joins', () => {
     ).orderBy('bio', OrderDirection.ASC);
 
     const rootCriteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
-      .join('profile', profileJoinCriteria, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      })
+      .join('profile', profileJoinCriteria)
       .setSelect(['uuid', 'username']);
 
     const fetchedUsers = await translateAndFetch<User>(
@@ -145,10 +142,7 @@ describe('TypeOrmMysqlTranslator - Ordering with One-to-One Joins', () => {
     ).orderBy('username', OrderDirection.ASC);
 
     const rootCriteria = CriteriaFactory.GetCriteria(CriteriaUserProfileSchema)
-      .join('user', userJoinCriteria, {
-        parent_field: 'user_uuid',
-        join_field: 'uuid',
-      })
+      .join('user', userJoinCriteria)
       .setSelect(['uuid', 'bio']);
 
     const fetchedUserProfiles = await translateAndFetch<UserProfile>(
@@ -453,10 +447,7 @@ describe('TypeOrmMysqlTranslator - Ordering with One-to-One Joins', () => {
 
     const rootCriteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .orderBy('username', OrderDirection.ASC)
-      .join('profile', profileJoinCriteria, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      })
+      .join('profile', profileJoinCriteria)
       .setSelect(['uuid', 'username']);
     profileJoinCriteria.orderBy('bio', OrderDirection.DESC);
 
@@ -556,10 +547,7 @@ describe('TypeOrmMysqlTranslator - Ordering with One-to-One Joins', () => {
     const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema)
       .setSelect(['title'])
       .orderBy('created_at', OrderDirection.DESC)
-      .join('publisher', publisherJoinCriteria, {
-        parent_field: 'user_uuid',
-        join_field: 'uuid',
-      })
+      .join('publisher', publisherJoinCriteria)
       .setTake(take);
     publisherJoinCriteria.orderBy('username', OrderDirection.ASC);
 
@@ -621,10 +609,7 @@ describe('TypeOrmMysqlTranslator - Ordering with One-to-One Joins', () => {
     const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .setSelect(['email'])
       .orderBy('username', OrderDirection.ASC)
-      .join('posts', postsJoinCriteria, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      });
+      .join('posts', postsJoinCriteria);
 
     const qb = await TypeORMUtils.getQueryBuilderFor<User>(
       UserEntity,

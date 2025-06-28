@@ -90,10 +90,7 @@ describe('TypeOrmMysqlTranslator - Basic One-to-One Joins', () => {
         operator: FilterOperator.EQUALS,
         value: targetUserWithProfile.uuid,
       })
-      .join('profile', profileJoinCriteria, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      });
+      .join('profile', profileJoinCriteria);
 
     const fetchedUser = await translateAndFetch<User>(
       rootCriteria,
@@ -134,10 +131,7 @@ describe('TypeOrmMysqlTranslator - Basic One-to-One Joins', () => {
         operator: FilterOperator.EQUALS,
         value: targetUserProfileWithUser.uuid,
       })
-      .join('user', userJoinCriteria, {
-        parent_field: 'user_uuid',
-        join_field: 'uuid',
-      });
+      .join('user', userJoinCriteria);
 
     const fetchedProfile = await translateAndFetch<UserProfile>(
       rootCriteria,
@@ -167,10 +161,6 @@ describe('TypeOrmMysqlTranslator - Basic One-to-One Joins', () => {
     const rootCriteria = CriteriaFactory.GetCriteria(CriteriaUserSchema).join(
       'profile',
       profileLeftJoinCriteria,
-      {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      },
     );
 
     const fetchedUsers = await translateAndFetch<User>(

@@ -56,11 +56,7 @@ describe('TypeOrmMysqlTranslator - Many-to-Many Relationships', () => {
         operator: FilterOperator.EQUALS,
         value: targetUserFromDB.uuid,
       })
-      .join('permissions', innerJoinPermissionCriteria, {
-        pivot_source_name: 'permission_user',
-        parent_field: { pivot_field: 'user_uuid', reference: 'uuid' },
-        join_field: { pivot_field: 'permission_uuid', reference: 'uuid' },
-      });
+      .join('permissions', innerJoinPermissionCriteria);
 
     const qb = await TypeORMUtils.getQueryBuilderFor<User>(
       UserEntity,
@@ -121,11 +117,6 @@ describe('TypeOrmMysqlTranslator - Many-to-Many Relationships', () => {
           operator: FilterOperator.EQUALS,
           value: expectedUserFromJoin.username,
         }),
-        {
-          pivot_source_name: 'permission_user',
-          parent_field: { pivot_field: 'permission_uuid', reference: 'uuid' },
-          join_field: { pivot_field: 'user_uuid', reference: 'uuid' },
-        },
       );
 
     const qb = await TypeORMUtils.getQueryBuilderFor<Permission>(

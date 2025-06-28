@@ -334,4 +334,90 @@ describe('TypeOrmMysqlTranslator - Extended Filter Operators', () => {
       expect(fetchedUser.email.toLowerCase().startsWith('user1@')).toBe(false);
     });
   });
+
+  it('should translate SET_NOT_CONTAINS_ANY for categories field', async () => {
+    const categoriesToExclude = ['tech', 'news'];
+    const expectedPosts = allPostsFromDB.filter(
+      (p) =>
+        p.categories === null ||
+        !categoriesToExclude.some((cat) => p.categories!.includes(cat)),
+    );
+
+    if (expectedPosts.length === 0) {
+      throw new Error(
+        `Test data issue: All posts contain at least one of the categories: ${categoriesToExclude.join(', ')}.`,
+      );
+    }
+
+    const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema).where({
+      field: 'categories',
+      operator: FilterOperator.SET_NOT_CONTAINS_ANY,
+      value: categoriesToExclude,
+    });
+
+    const qb = await translateAndGetQueryBuilder<Post>(criteria, PostEntity);
+    const sql = qb.getSql();
+    const params = qb.getParameters();
+    const fetchedPosts = await qb.getMany();
+
+    expect(sql).toContain(
+      `(\`${criteria.alias}\`.\`categories\` IS NULL OR (FIND_IN_SET(?, \`${criteria.alias}\`.\`categories\`) = 0 AND FIND_IN_SET(?, \`${criteria.alias}\`.\`categories\`) = 0))`,
+    );
+    expect(params['param_0']).toBe(categoriesToExclude[0]);
+    expect(params['param_1']).toBe(categoriesToExclude[1]);
+    expect(fetchedPosts.length).toBe(expectedPosts.length);
+    fetchedPosts.forEach((fp) => {
+      if (fp.categories !== null) {
+        expect(
+          categoriesToExclude.some((cat) => fp.categories!.includes(cat)),
+        ).toBe(false);
+      }
+    });
+  });
+
+  it('should translate SET_NOT_CONTAINS_ALL for categories field', async () => {
+    const categoriesToExclude = ['tech', 'typeorm'];
+    const expectedPosts = allPostsFromDB.filter(
+      (p) =>
+        p.categories === null ||
+        !categoriesToExclude.every((cat) => p.categories!.includes(cat)),
+    );
+
+    const postsThatContainAll = allPostsFromDB.filter(
+      (p) =>
+        p.categories !== null &&
+        categoriesToExclude.every((cat) => p.categories!.includes(cat)),
+    );
+
+    if (postsThatContainAll.length === 0) {
+      throw new Error(
+        `Test data issue: No posts found with all categories: ${categoriesToExclude.join(', ')} to make exclusion meaningful.`,
+      );
+    }
+
+    const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema).where({
+      field: 'categories',
+      operator: FilterOperator.SET_NOT_CONTAINS_ALL,
+      value: categoriesToExclude,
+    });
+
+    const qb = await translateAndGetQueryBuilder<Post>(criteria, PostEntity);
+    const sql = qb.getSql();
+    const params = qb.getParameters();
+    const fetchedPosts = await qb.getMany();
+
+    expect(sql).toContain(
+      `(\`${criteria.alias}\`.\`categories\` IS NULL OR (FIND_IN_SET(?, \`${criteria.alias}\`.\`categories\`) = 0 OR FIND_IN_SET(?, \`${criteria.alias}\`.\`categories\`) = 0))`,
+    );
+    expect(params['param_0']).toBe(categoriesToExclude[0]);
+    expect(params['param_1']).toBe(categoriesToExclude[1]);
+    expect(fetchedPosts.length).toBe(expectedPosts.length);
+    fetchedPosts.forEach((fp) => {
+      if (fp.categories !== null) {
+        expect(
+          categoriesToExclude.every((cat) => fp.categories!.includes(cat)),
+        ).toBe(false);
+      }
+    });
+  });
 });

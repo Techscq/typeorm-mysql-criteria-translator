@@ -74,10 +74,6 @@ describe('TypeOrmMysqlTranslator - Field Selection (setSelect) with One-to-One J
         CriteriaFactory.GetInnerJoinCriteria(
           CriteriaUserProfileSchema,
         ).setSelect(['bio', 'uuid']),
-        {
-          parent_field: 'uuid',
-          join_field: 'user_uuid',
-        },
       );
 
     const fetchedUsers = await translateAndFetch<User>(
@@ -94,9 +90,7 @@ describe('TypeOrmMysqlTranslator - Field Selection (setSelect) with One-to-One J
     expect(fetchedUser.created_at).toBeUndefined();
     expect(fetchedUser.profile).toBeDefined();
     if (fetchedUser.profile) {
-      expect(fetchedUser.profile.uuid).toBe(
-        targetUserWithProfile.profile.uuid,
-      );
+      expect(fetchedUser.profile.uuid).toBe(targetUserWithProfile.profile.uuid);
       expect(fetchedUser.profile.bio).toBe(targetUserWithProfile.profile.bio);
       expect(fetchedUser.profile.preferences).toBeUndefined();
     }
@@ -126,10 +120,6 @@ describe('TypeOrmMysqlTranslator - Field Selection (setSelect) with One-to-One J
           'email',
           'uuid',
         ]),
-        {
-          parent_field: 'user_uuid',
-          join_field: 'uuid',
-        },
       );
 
     const fetchedProfiles = await translateAndFetch<UserProfile>(
@@ -163,10 +153,6 @@ describe('TypeOrmMysqlTranslator - Field Selection (setSelect) with One-to-One J
         CriteriaFactory.GetLeftJoinCriteria(
           CriteriaUserProfileSchema,
         ).setSelect(['bio', 'uuid']),
-        {
-          parent_field: 'uuid',
-          join_field: 'user_uuid',
-        },
       );
 
     const fetchedUsers = await translateAndFetch<User>(

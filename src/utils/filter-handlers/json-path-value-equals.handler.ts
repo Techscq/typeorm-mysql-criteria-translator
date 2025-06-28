@@ -3,12 +3,13 @@ import type { IFilterOperatorHandler } from './filter-operator-handler.interface
 import type { TypeOrmConditionFragment } from '../type-orm-filter-fragment-builder.js';
 import type { TypeOrmParameterManager } from '../type-orm-parameter-manager.js';
 
-export class JsonContainsHandler implements IFilterOperatorHandler {
+export class JsonPathValueEqualsHandler implements IFilterOperatorHandler {
   public build(
     fieldName: string,
     filter: Filter<
       string,
-      FilterOperator.JSON_CONTAINS | FilterOperator.JSON_NOT_CONTAINS
+      | FilterOperator.JSON_PATH_VALUE_EQUALS
+      | FilterOperator.JSON_PATH_VALUE_NOT_EQUALS
     >,
     parameterManager: TypeOrmParameterManager,
   ): TypeOrmConditionFragment {
@@ -21,20 +22,17 @@ export class JsonContainsHandler implements IFilterOperatorHandler {
 
     const conditions: string[] = [];
     const parameters: Record<string, any> = {};
-    const isNotContains = filter.operator === FilterOperator.JSON_NOT_CONTAINS;
-    const logicalOperator = isNotContains ? ' OR ' : ' AND ';
+    const op =
+      filter.operator === FilterOperator.JSON_PATH_VALUE_EQUALS ? '=' : '!=';
 
     for (const path in filter.value) {
       const paramName = parameterManager.generateParamName();
       const jsonValue = (filter.value as Record<string, any>)[path];
 
-      let condition = `JSON_CONTAINS(${fieldName}, :${paramName}, '$.${path}')`;
-      if (isNotContains) {
-        condition = `NOT ${condition}`;
-      }
+      const condition = `JSON_EXTRACT(${fieldName}, '$.${path}') ${op} :${paramName}`;
 
       conditions.push(condition);
-      parameters[paramName] = JSON.stringify(jsonValue);
+      parameters[paramName] = jsonValue;
     }
 
     if (conditions.length === 0) {
@@ -45,7 +43,7 @@ export class JsonContainsHandler implements IFilterOperatorHandler {
     }
 
     return {
-      queryFragment: conditions.join(logicalOperator),
+      queryFragment: conditions.join(' AND '),
       parameters,
     };
   }

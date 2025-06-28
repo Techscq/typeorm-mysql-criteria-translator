@@ -72,8 +72,8 @@ describe('TypeOrmMysqlTranslator - Filtering with One-to-One Joins', () => {
   it('should fetch Users filtered by a field in their UserProfile', async () => {
     const bioSearchTerm = 'Bio for user_2';
 
-    const expectedUsers = actualUsersFromDB.filter(
-      (u) => u.profile?.bio?.includes(bioSearchTerm),
+    const expectedUsers = actualUsersFromDB.filter((u) =>
+      u.profile?.bio?.includes(bioSearchTerm),
     );
 
     if (expectedUsers.length === 0) {
@@ -93,10 +93,6 @@ describe('TypeOrmMysqlTranslator - Filtering with One-to-One Joins', () => {
     const rootCriteria = CriteriaFactory.GetCriteria(CriteriaUserSchema).join(
       'profile',
       profileJoinCriteria,
-      {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      },
     );
 
     const fetchedUsers = await translateAndFetch<User>(
@@ -136,10 +132,7 @@ describe('TypeOrmMysqlTranslator - Filtering with One-to-One Joins', () => {
 
     const rootCriteria = CriteriaFactory.GetCriteria(
       CriteriaUserProfileSchema,
-    ).join('user', userJoinCriteria, {
-      parent_field: 'user_uuid',
-      join_field: 'uuid',
-    });
+    ).join('user', userJoinCriteria);
 
     const fetchedProfiles = await translateAndFetch<UserProfile>(
       rootCriteria,
@@ -186,10 +179,7 @@ describe('TypeOrmMysqlTranslator - Filtering with One-to-One Joins', () => {
         operator: FilterOperator.CONTAINS,
         value: usernameSearchTerm,
       })
-      .join('profile', profileJoinCriteria, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      });
+      .join('profile', profileJoinCriteria);
 
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,

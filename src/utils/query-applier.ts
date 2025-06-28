@@ -1,11 +1,6 @@
 import { Brackets, type ObjectLiteral, type SelectQueryBuilder } from 'typeorm';
 import { TypeOrmConditionBuilder } from './type-orm-condition-builder.js';
 import { QueryState } from './query-state.js';
-import {
-  FilterOperator,
-  OrderDirection,
-} from '@nulledexp/translatable-criteria';
-
 /**
  * QueryApplier is responsible for applying the collected query state
  * (selects, orders, cursors) to a TypeORM SelectQueryBuilder.
@@ -41,21 +36,11 @@ export class QueryApplier<T extends ObjectLiteral> {
     this._queryState.sortOrderByWithSequentialId();
     let isFirstOverallOrderByApplied = false;
 
-    if (this._queryState.getCursorOrderBy().length > 0) {
-      this._queryState
-        .getCursorOrderBy()
-        .forEach(([parsedField, orderDirection], index) => {
-          if (index === 0) {
-            qb.orderBy(parsedField, orderDirection);
-            isFirstOverallOrderByApplied = true;
-          } else {
-            qb.addOrderBy(parsedField, orderDirection);
-          }
-        });
-    }
-
     for (const [alias, orderInstance] of this._queryState.getOrderBy()) {
       const fieldPath = `${alias}.${String(orderInstance.field)}`;
+
+      // NOTE: NULLS FIRST/LAST is not supported due to MySQL and TypeORM limitations.
+      // The third parameter for nulls ordering is intentionally omitted.
       if (!isFirstOverallOrderByApplied) {
         qb.orderBy(fieldPath, orderInstance.direction);
         isFirstOverallOrderByApplied = true;
@@ -92,14 +77,6 @@ export class QueryApplier<T extends ObjectLiteral> {
       } else {
         qb.where(cursorBracket);
         this._queryState.setQueryHasWhereClauses(true);
-      }
-
-      for (const filter of combinedFilters) {
-        const orderDirection =
-          filter.operator === FilterOperator.GREATER_THAN
-            ? OrderDirection.ASC
-            : OrderDirection.DESC;
-        this._queryState.addCursorOrderBy(String(filter.field), orderDirection);
       }
     }
 

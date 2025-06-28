@@ -1,11 +1,11 @@
 import type { IFilterOperatorHandler } from './filter-operator-handler.interface.js';
 import type { TypeOrmConditionFragment } from '../type-orm-filter-fragment-builder.js';
-import type { Filter } from '@nulledexp/translatable-criteria';
+import { FilterOperator, type Filter } from '@nulledexp/translatable-criteria';
 import type { TypeOrmParameterManager } from '../type-orm-parameter-manager.js';
 import type { ObjectLiteral } from 'typeorm';
 
 /**
- * Handles ARRAY_CONTAINS_ELEMENT operator for JSON arrays.
+ * Handles ARRAY_CONTAINS_ELEMENT and ARRAY_NOT_CONTAINS_ELEMENT operators for JSON arrays.
  */
 export class ArrayContainsElementHandler implements IFilterOperatorHandler {
   /**
@@ -13,7 +13,11 @@ export class ArrayContainsElementHandler implements IFilterOperatorHandler {
    */
   public build(
     fieldName: string,
-    filter: Filter<string, any>,
+    filter: Filter<
+      string,
+      | FilterOperator.ARRAY_CONTAINS_ELEMENT
+      | FilterOperator.ARRAY_NOT_CONTAINS_ELEMENT
+    >,
     parameterManager: TypeOrmParameterManager,
   ): TypeOrmConditionFragment {
     const value = filter.value;
@@ -31,9 +35,14 @@ export class ArrayContainsElementHandler implements IFilterOperatorHandler {
     const paramName = parameterManager.generateParamName();
     const jsonValue = JSON.stringify(elementValue);
 
-    const queryFragment = path
+    const isNotContains =
+      filter.operator === FilterOperator.ARRAY_NOT_CONTAINS_ELEMENT;
+
+    const condition = path
       ? `JSON_CONTAINS(${fieldName}, :${paramName}, '${path}')`
       : `JSON_CONTAINS(${fieldName}, :${paramName})`;
+
+    const queryFragment = isNotContains ? `${condition} = 0` : condition;
 
     return {
       queryFragment,

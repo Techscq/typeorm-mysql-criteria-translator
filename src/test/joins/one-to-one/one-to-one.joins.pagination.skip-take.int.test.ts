@@ -85,10 +85,6 @@ describe('TypeOrmMysqlTranslator - Skip/Take Pagination with One-to-One Joins', 
       .join(
         'profile',
         CriteriaFactory.GetInnerJoinCriteria(CriteriaUserProfileSchema),
-        {
-          parent_field: 'uuid',
-          join_field: 'user_uuid',
-        },
       )
       .orderBy('username', OrderDirection.ASC)
       .setTake(take)
@@ -126,10 +122,6 @@ describe('TypeOrmMysqlTranslator - Skip/Take Pagination with One-to-One Joins', 
           'bio',
           OrderDirection.ASC,
         ),
-        {
-          parent_field: 'uuid',
-          join_field: 'user_uuid',
-        },
       )
       .setTake(take)
       .setSkip(skip);
@@ -161,10 +153,6 @@ describe('TypeOrmMysqlTranslator - Skip/Take Pagination with One-to-One Joins', 
       .join(
         'profile',
         CriteriaFactory.GetLeftJoinCriteria(CriteriaUserProfileSchema),
-        {
-          parent_field: 'uuid',
-          join_field: 'user_uuid',
-        },
       )
       .orderBy('username', OrderDirection.ASC)
       .setTake(take)
@@ -207,10 +195,6 @@ describe('TypeOrmMysqlTranslator - Skip/Take Pagination with One-to-One Joins', 
           'bio',
           OrderDirection.ASC,
         ),
-        {
-          parent_field: 'uuid',
-          join_field: 'user_uuid',
-        },
       )
       .orderBy('uuid', OrderDirection.ASC)
       .setTake(take)

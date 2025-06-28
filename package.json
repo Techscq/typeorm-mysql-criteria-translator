@@ -67,6 +67,6 @@
     "url": "https://github.com/Techscq/typeorm-mysql-criteria-translator/issues"
   },
   "dependencies": {
-    "@nulledexp/translatable-criteria": "file:nulledexp-translatable-criteria-1.2.0.tgz"
+    "@nulledexp/translatable-criteria": "file:nulledexp-translatable-criteria-next.tgz"
   }
 }

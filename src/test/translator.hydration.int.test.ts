@@ -119,10 +119,6 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       .join(
         'publisher',
         CriteriaFactory.GetInnerJoinCriteria(CriteriaUserSchema),
-        {
-          parent_field: 'user_uuid',
-          join_field: 'uuid',
-        },
       )
       .where({
         field: 'uuid',
@@ -187,12 +183,12 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       .filter(
         (u) =>
           (u.email.includes(
-              user1.email.substring(0, user1.email.indexOf('@')),
-            ) &&
+            user1.email.substring(0, user1.email.indexOf('@')),
+          ) &&
             u.username === user1.username) ||
           (u.email.includes(
-              user2.email.substring(0, user2.email.indexOf('@')),
-            ) &&
+            user2.email.substring(0, user2.email.indexOf('@')),
+          ) &&
             u.username === user2.username),
       )
       .sort((a, b) => a.email.localeCompare(b.email));
@@ -237,10 +233,6 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
             operator: FilterOperator.CONTAINS,
             value: user2.email.substring(0, user2.email.indexOf('@')),
           }),
-        {
-          parent_field: 'user_uuid',
-          join_field: 'uuid',
-        },
       )
       .orderBy('created_at', OrderDirection.ASC);
 
@@ -317,10 +309,6 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       .join(
         'comments',
         CriteriaFactory.GetLeftJoinCriteria(CriteriaCommentSchema),
-        {
-          parent_field: 'uuid',
-          join_field: 'post_uuid',
-        },
       )
       .where({
         field: 'uuid',
@@ -366,5 +354,50 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
     const qb = await translateAndGetQueryBuilder<User>(criteria, UserEntity);
 
     await expect(qb.getOneOrFail()).rejects.toThrow(EntityNotFoundError);
+  });
+  it('should filter by a joined entity without selecting its fields (withSelect: false)', async () => {
+    const targetPublisherUsername = 'user_1';
+    const targetPublisher = actualUsersFromDB.find(
+      (u) => u.username === targetPublisherUsername,
+    );
+
+    if (!targetPublisher) {
+      throw new Error(
+        `Test data issue: User with username "${targetPublisherUsername}" not found in DB.`,
+      );
+    }
+
+    const expectedPosts = actualPostsFromDB.filter(
+      (p) => p.publisher?.uuid === targetPublisher.uuid,
+    );
+
+    expect(
+      expectedPosts.length,
+      'Test data issue: No posts found for the target publisher to test withSelect: false',
+    ).toBeGreaterThan(0);
+
+    const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema).join(
+      'publisher',
+      CriteriaFactory.GetInnerJoinCriteria(CriteriaUserSchema).where({
+        field: 'username',
+        operator: FilterOperator.EQUALS,
+        value: targetPublisherUsername,
+      }),
+      false,
+    );
+
+    const qb = await translateAndGetQueryBuilder<Post>(criteria, PostEntity);
+    const fetchedPosts = await qb.getMany();
+    expect(fetchedPosts).toHaveLength(expectedPosts.length);
+    const fetchedPostUuids = fetchedPosts.map((p) => p.uuid).sort();
+    const expectedPostUuids = expectedPosts.map((p) => p.uuid).sort();
+    expect(fetchedPostUuids).toEqual(expectedPostUuids);
+
+    fetchedPosts.forEach((post) => {
+      expect(
+        post.publisher,
+        `Post ${post.uuid} should not have its publisher property hydrated.`,
+      ).toBeUndefined();
+    });
   });
 });

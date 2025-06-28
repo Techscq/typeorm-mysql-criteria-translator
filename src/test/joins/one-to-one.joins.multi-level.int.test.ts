@@ -95,15 +95,9 @@ describe('TypeOrmMysqlTranslator - Multi-Level Join Translation', () => {
         operator: FilterOperator.LIKE,
         value: '%Post Title%',
       })
-      .join('comments', commentJoinCriteria, {
-        parent_field: 'uuid',
-        join_field: 'post_uuid',
-      });
+      .join('comments', commentJoinCriteria);
 
-    rootCriteria.join('posts', postJoinCriteria, {
-      parent_field: 'uuid',
-      join_field: 'user_uuid',
-    });
+    rootCriteria.join('posts', postJoinCriteria);
 
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,
@@ -147,24 +141,17 @@ describe('TypeOrmMysqlTranslator - Multi-Level Join Translation', () => {
         value: targetUser.uuid,
       });
 
-    const commentJoinCriteria =
-      CriteriaFactory.GetLeftJoinCriteria(PostCommentSchema).setSelect([
-        'comment_text',
-      ]);
+    const commentJoinCriteria = CriteriaFactory.GetLeftJoinCriteria(
+      PostCommentSchema,
+    ).setSelect(['comment_text']);
 
     const postJoinCriteria = CriteriaFactory.GetLeftJoinCriteria(
       CriteriaPostSchema,
     )
       .setSelect(['title'])
-      .join('comments', commentJoinCriteria, {
-        parent_field: 'uuid',
-        join_field: 'post_uuid',
-      });
+      .join('comments', commentJoinCriteria);
 
-    rootCriteria.join('posts', postJoinCriteria, {
-      parent_field: 'uuid',
-      join_field: 'user_uuid',
-    });
+    rootCriteria.join('posts', postJoinCriteria);
 
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,
@@ -218,15 +205,9 @@ describe('TypeOrmMysqlTranslator - Multi-Level Join Translation', () => {
       PostCommentSchema,
     ).orderBy('created_at', OrderDirection.DESC);
 
-    postJoinCriteria.join('comments', commentJoinCriteria, {
-      parent_field: 'uuid',
-      join_field: 'post_uuid',
-    });
+    postJoinCriteria.join('comments', commentJoinCriteria);
 
-    rootCriteria.join('posts', postJoinCriteria, {
-      parent_field: 'uuid',
-      join_field: 'user_uuid',
-    });
+    rootCriteria.join('posts', postJoinCriteria);
 
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,

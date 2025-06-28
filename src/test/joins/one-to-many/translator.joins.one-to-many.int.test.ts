@@ -86,12 +86,12 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
       value: `%${specificPostTitlePart}%`,
     });
 
-    rootCriteria.join('posts', postJoinCriteria, {
-      parent_field: 'uuid',
-      join_field: 'user_uuid',
-    });
+    rootCriteria.join('posts', postJoinCriteria);
 
-    const fetchedUsers = await translateAndFetch<User>(rootCriteria, UserEntity);
+    const fetchedUsers = await translateAndFetch<User>(
+      rootCriteria,
+      UserEntity,
+    );
 
     expect(fetchedUsers.length).toBe(1);
     const fetchedUser = fetchedUsers[0]!;
@@ -139,11 +139,11 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
         value: 'tech',
       });
 
-    rootCriteria.join('posts', postJoinCriteria, {
-      parent_field: 'uuid',
-      join_field: 'user_uuid',
-    });
-    const fetchedUsers = await translateAndFetch<User>(rootCriteria, UserEntity);
+    rootCriteria.join('posts', postJoinCriteria);
+    const fetchedUsers = await translateAndFetch<User>(
+      rootCriteria,
+      UserEntity,
+    );
 
     expect(fetchedUsers.length).toBe(1);
     const fetchedUser = fetchedUsers[0]!;
@@ -181,12 +181,12 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
       PostCommentSchema,
     ).setSelect(['uuid', 'comment_text']);
 
-    rootCriteria.join('comments', commentJoinCriteria, {
-      parent_field: 'uuid',
-      join_field: 'post_uuid',
-    });
+    rootCriteria.join('comments', commentJoinCriteria);
 
-    const fetchedPosts = await translateAndFetch<Post>(rootCriteria, PostEntity);
+    const fetchedPosts = await translateAndFetch<Post>(
+      rootCriteria,
+      PostEntity,
+    );
 
     expect(fetchedPosts.length).toBe(1);
     const fetchedPost = fetchedPosts[0]!;
@@ -235,12 +235,12 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
         value: 'specific-user-uuid-for-test',
       });
 
-    rootCriteria.join('comments', commentJoinCriteria, {
-      parent_field: 'uuid',
-      join_field: 'post_uuid',
-    });
+    rootCriteria.join('comments', commentJoinCriteria);
 
-    const fetchedPosts = await translateAndFetch<Post>(rootCriteria, PostEntity);
+    const fetchedPosts = await translateAndFetch<Post>(
+      rootCriteria,
+      PostEntity,
+    );
 
     expect(fetchedPosts.length).toBe(1);
     const fetchedPost = fetchedPosts[0]!;
@@ -311,12 +311,12 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
         value: targetUser.uuid,
       });
 
-    rootCriteria.join('posts', postJoinCriteria, {
-      parent_field: 'uuid',
-      join_field: 'user_uuid',
-    });
+    rootCriteria.join('posts', postJoinCriteria);
 
-    const fetchedUsers = await translateAndFetch<User>(rootCriteria, UserEntity);
+    const fetchedUsers = await translateAndFetch<User>(
+      rootCriteria,
+      UserEntity,
+    );
 
     expect(fetchedUsers.length).toBeGreaterThanOrEqual(0);
     if (fetchedUsers.length > 0) {

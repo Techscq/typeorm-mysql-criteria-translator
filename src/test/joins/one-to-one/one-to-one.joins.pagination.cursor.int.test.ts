@@ -106,7 +106,6 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
       .join(
         'profile',
         CriteriaFactory.GetInnerJoinCriteria(CriteriaUserProfileSchema),
-        { parent_field: 'uuid', join_field: 'user_uuid' },
       )
       .orderBy('username', OrderDirection.ASC)
       .orderBy('uuid', OrderDirection.ASC)
@@ -122,7 +121,6 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
       .join(
         'profile',
         CriteriaFactory.GetInnerJoinCriteria(CriteriaUserProfileSchema),
-        { parent_field: 'uuid', join_field: 'user_uuid' },
       )
       .setCursor(
         [
@@ -159,7 +157,6 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
       .join(
         'profile',
         CriteriaFactory.GetLeftJoinCriteria(CriteriaUserProfileSchema),
-        { parent_field: 'uuid', join_field: 'user_uuid' },
       )
       .orderBy('username', OrderDirection.ASC)
       .orderBy('uuid', OrderDirection.ASC)
@@ -175,7 +172,6 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
       .join(
         'profile',
         CriteriaFactory.GetLeftJoinCriteria(CriteriaUserProfileSchema),
-        { parent_field: 'uuid', join_field: 'user_uuid' },
       )
       .setCursor(
         [
@@ -212,10 +208,7 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
       CriteriaUserProfileSchema,
     ).orderBy('bio', OrderDirection.ASC);
     const page1Criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
-      .join('profile', profileJoinPage1, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      })
+      .join('profile', profileJoinPage1)
       .orderBy('uuid', OrderDirection.ASC)
       .setTake(pageSize);
 
@@ -237,10 +230,7 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
       )
       .orderBy('bio', OrderDirection.ASC);
     const page2Criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
-      .join('profile', profileJoinPage2, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      })
+      .join('profile', profileJoinPage2)
       .setCursor(
         [{ field: 'uuid', value: lastUserOfPage1.uuid }],
         FilterOperator.GREATER_THAN,
@@ -273,10 +263,7 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
       CriteriaUserProfileSchema,
     ).orderBy('bio', OrderDirection.DESC);
     const page1Criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
-      .join('profile', profileJoinPage1, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      })
+      .join('profile', profileJoinPage1)
       .orderBy('uuid', OrderDirection.DESC)
       .setTake(pageSize);
 
@@ -298,10 +285,7 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
       )
       .orderBy('bio', OrderDirection.DESC);
     const page2Criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
-      .join('profile', profileJoinPage2, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      })
+      .join('profile', profileJoinPage2)
       .setCursor(
         [{ field: 'uuid', value: lastUserOfPage1.uuid }],
         FilterOperator.LESS_THAN,
@@ -335,10 +319,7 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
     ).setSelect(['bio']);
     const page1Criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .setSelect(['email'])
-      .join('profile', profileJoinPage1, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      })
+      .join('profile', profileJoinPage1)
       .orderBy('username', OrderDirection.ASC)
       .orderBy('uuid', OrderDirection.ASC)
       .setTake(pageSize);
@@ -366,10 +347,7 @@ describe('TypeOrmMysqlTranslator - Cursor Pagination with One-to-One Joins', () 
     ).setSelect(['bio']);
     const page2Criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .setSelect(['email'])
-      .join('profile', profileJoinPage2, {
-        parent_field: 'uuid',
-        join_field: 'user_uuid',
-      })
+      .join('profile', profileJoinPage2)
       .setCursor(
         [
           { field: 'username', value: lastUserOfPage1.username },

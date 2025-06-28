@@ -5,7 +5,6 @@ import {
   type FilterPrimitive,
   type ICriteriaBase,
   type Order,
-  OrderDirection,
   type FieldOfSchema,
 } from '@nulledexp/translatable-criteria';
 
@@ -16,7 +15,6 @@ import {
 export class QueryState {
   private _selects: Set<string> = new Set<string>([]);
   private _orderBy: Array<[string, Order<any>]> = [];
-  private _cursorOrderBy: Array<[string, OrderDirection]> = [];
   private _queryHasWhereClauses: boolean = false;
   private _collectedCursors: Array<
     [
@@ -32,7 +30,6 @@ export class QueryState {
   public reset(): void {
     this._selects.clear();
     this._orderBy = [];
-    this._cursorOrderBy = [];
     this._queryHasWhereClauses = false;
     this._collectedCursors = [];
     this._cursorWasApplied = false;
@@ -183,23 +180,6 @@ export class QueryState {
    */
   public getOrderBy(): Array<[string, Order<any>]> {
     return this._orderBy;
-  }
-
-  /**
-   * Gets the collected cursor order-by clauses.
-   * @returns An array of cursor order-by clauses.
-   */
-  public getCursorOrderBy(): Array<[string, OrderDirection]> {
-    return this._cursorOrderBy;
-  }
-
-  /**
-   * Adds a cursor order-by field.
-   * @param field The field name.
-   * @param direction The order direction.
-   */
-  public addCursorOrderBy(field: string, direction: OrderDirection): void {
-    this._cursorOrderBy.push([field, direction]);
   }
 
   /**

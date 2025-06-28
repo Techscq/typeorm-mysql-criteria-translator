@@ -99,10 +99,7 @@ describe('TypeOrmMysqlTranslator - Pagination and Ordering', () => {
 
     const criteria = CriteriaFactory.GetCriteria(CriteriaPostSchema)
       .orderBy('uuid', OrderDirection.ASC)
-      .join('publisher', publisherJoinCriteria, {
-        parent_field: 'user_uuid',
-        join_field: 'uuid',
-      })
+      .join('publisher', publisherJoinCriteria)
       .setTake(take)
       .setSkip(skip);
 

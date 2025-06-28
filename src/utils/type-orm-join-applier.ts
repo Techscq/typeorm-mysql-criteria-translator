@@ -43,7 +43,7 @@ export class TypeOrmJoinApplier<T extends ObjectLiteral> {
       | PivotJoin<CriteriaSchema, CriteriaSchema, JoinRelationType>
       | SimpleJoin<CriteriaSchema, CriteriaSchema, JoinRelationType>,
   ): SelectQueryBuilder<T> {
-    const joinAlias = parameters.join_alias;
+    const joinAlias = parameters.relation_alias;
     const targetTableNameOrRelationProperty = `${parameters.parent_alias}.${joinAlias}`;
 
     let onConditionClause: string | undefined = undefined;
@@ -60,34 +60,48 @@ export class TypeOrmJoinApplier<T extends ObjectLiteral> {
         onConditionParams = onConditionResult.parameters;
       }
     }
+    if (parameters.with_select) {
+      this._queryState.collectCursor(
+        parameters.relation_alias,
+        criteria.cursor,
+      );
 
-    this._queryState.collectCursor(parameters.join_alias, criteria.cursor);
+      const baseJoinMethod =
+        joinType === 'inner' ? qb.innerJoinAndSelect : qb.leftJoinAndSelect;
 
-    const baseJoinMethod =
-      joinType === 'inner' ? qb.innerJoinAndSelect : qb.leftJoinAndSelect;
+      baseJoinMethod.call(
+        qb,
+        targetTableNameOrRelationProperty,
+        joinAlias,
+        onConditionClause,
+        onConditionParams,
+      );
 
-    baseJoinMethod.call(
-      qb,
-      targetTableNameOrRelationProperty,
-      joinAlias,
-      onConditionClause,
-      onConditionParams,
-    );
+      this._queryState.resolveSelects(joinAlias, criteria);
+      this._queryState.clearAmbiguousSelect(
+        `${parameters.parent_alias}.${String(parameters.local_field)}`,
+      );
+      this._queryState.clearAmbiguousSelect(
+        `${joinAlias}.${String(parameters.relation_field)}`,
+      );
+      this._queryState.addFieldToSelection(
+        `${joinAlias}.${criteria.identifierField}`,
+      );
+      this._queryState.addFieldToSelection(
+        `${parameters.parent_alias}.${parameters.parent_identifier}`,
+      );
+      this._queryState.recordOrderBy(criteria.orders, joinAlias);
+    } else {
+      const baseJoinMethod = joinType === 'inner' ? qb.innerJoin : qb.leftJoin;
+      baseJoinMethod.call(
+        qb,
+        targetTableNameOrRelationProperty,
+        joinAlias,
+        onConditionClause,
+        onConditionParams,
+      );
+    }
 
-    this._queryState.resolveSelects(joinAlias, criteria);
-    this._queryState.clearAmbiguousSelect(
-      `${parameters.parent_alias}.${String(parameters.parent_field)}`,
-    );
-    this._queryState.clearAmbiguousSelect(
-      `${joinAlias}.${String(parameters.join_field)}`,
-    );
-    this._queryState.addFieldToSelection(
-      `${joinAlias}.${criteria.identifierField}`,
-    );
-    this._queryState.addFieldToSelection(
-      `${parameters.parent_alias}.${parameters.parent_identifier}`,
-    );
-    this._queryState.recordOrderBy(criteria.orders, joinAlias);
     return qb;
   }
 }
