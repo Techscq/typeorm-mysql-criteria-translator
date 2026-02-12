@@ -16,12 +16,15 @@ export const UserProfileEntity = new EntitySchema<UserProfile>({
       type: 'json',
       nullable: true,
     },
+    user_uuid: {
+      type: 'uuid',
+    },
   },
   relations: {
     user: {
       type: 'one-to-one',
       target: 'User',
-      inverseSide: 'profile_uuid',
+      inverseSide: 'profile',
       joinColumn: {
         name: 'user_uuid',
         referencedColumnName: 'uuid',

@@ -1,5 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
-import { GetTypedCriteriaSchema } from '@nulledexp/translatable-criteria';
+import {
+  GetTypedCriteriaSchema,
+  SelectType,
+} from '@nulledexp/translatable-criteria';
 
 export interface EntityBase {
   uuid: string;
@@ -9,6 +12,7 @@ export interface EntityBase {
 export interface UserProfile extends EntityBase {
   bio: string | null;
   preferences: Record<string, any> | null;
+  user_uuid: string;
   user?: User;
 }
 
@@ -19,6 +23,9 @@ export const UserProfileSchema = GetTypedCriteriaSchema({
   fields: ['uuid', 'bio', 'preferences', 'created_at', 'user_uuid'],
   relations: [
     {
+      default_options: {
+        select: SelectType.ID_ONLY,
+      },
       relation_alias: 'user',
       relation_type: 'one_to_one',
       target_source_name: 'user',
@@ -45,6 +52,9 @@ export const UserSchema = GetTypedCriteriaSchema({
   fields: ['uuid', 'email', 'username', 'created_at'],
   relations: [
     {
+      default_options: {
+        select: SelectType.FULL_ENTITY,
+      },
       relation_alias: 'permissions',
       relation_type: 'many_to_many',
       target_source_name: 'permission',
@@ -53,6 +63,9 @@ export const UserSchema = GetTypedCriteriaSchema({
       relation_field: { reference: 'uuid', pivot_field: 'permission_uuid' },
     },
     {
+      default_options: {
+        select: SelectType.FULL_ENTITY,
+      },
       relation_alias: 'addresses',
       relation_type: 'one_to_many',
       target_source_name: 'address',
@@ -60,6 +73,9 @@ export const UserSchema = GetTypedCriteriaSchema({
       relation_field: 'user_uuid',
     },
     {
+      default_options: {
+        select: SelectType.NO_SELECTION,
+      },
       relation_alias: 'posts',
       relation_type: 'one_to_many',
       target_source_name: 'post',
@@ -67,6 +83,9 @@ export const UserSchema = GetTypedCriteriaSchema({
       relation_field: 'user_uuid',
     },
     {
+      default_options: {
+        select: SelectType.FULL_ENTITY,
+      },
       relation_alias: 'profile',
       relation_type: 'one_to_one',
       target_source_name: 'user_profile',
@@ -80,8 +99,9 @@ export type UserSchema = typeof UserSchema;
 export interface Post extends EntityBase {
   title: string;
   body: string;
-  publisher: User;
-  comments: Comment[];
+  publisher?: User;
+  user_uuid: string;
+  comments?: Comment[];
   categories: string[] | null;
   metadata?: {
     tags?: string[];
@@ -106,6 +126,9 @@ export const PostSchema = GetTypedCriteriaSchema({
   ],
   relations: [
     {
+      default_options: {
+        select: SelectType.FULL_ENTITY,
+      },
       relation_alias: 'comments',
       relation_type: 'one_to_many',
       target_source_name: 'post_comment',
@@ -113,6 +136,9 @@ export const PostSchema = GetTypedCriteriaSchema({
       relation_field: 'post_uuid',
     },
     {
+      default_options: {
+        select: SelectType.FULL_ENTITY,
+      },
       relation_alias: 'publisher',
       relation_type: 'many_to_one',
       target_source_name: 'user',
@@ -125,8 +151,10 @@ export type PostSchema = typeof PostSchema;
 
 export interface Comment extends EntityBase {
   comment_text: string;
-  post: Post;
-  user: User;
+  post_uuid: string;
+  post?: Post;
+  user_uuid: string;
+  publisher?: User;
 }
 
 export const PostCommentSchema = GetTypedCriteriaSchema({
@@ -136,6 +164,9 @@ export const PostCommentSchema = GetTypedCriteriaSchema({
   fields: ['uuid', 'comment_text', 'user_uuid', 'post_uuid', 'created_at'],
   relations: [
     {
+      default_options: {
+        select: SelectType.ID_ONLY,
+      },
       relation_alias: 'post',
       relation_type: 'many_to_one',
       target_source_name: 'post',
@@ -143,7 +174,10 @@ export const PostCommentSchema = GetTypedCriteriaSchema({
       relation_field: 'uuid',
     },
     {
-      relation_alias: 'user',
+      default_options: {
+        select: SelectType.FULL_ENTITY,
+      },
+      relation_alias: 'publisher',
       relation_type: 'many_to_one',
       target_source_name: 'user',
       local_field: 'user_uuid',
@@ -164,6 +198,9 @@ export const PermissionSchema = GetTypedCriteriaSchema({
   fields: ['uuid', 'name', 'created_at'],
   relations: [
     {
+      default_options: {
+        select: SelectType.NO_SELECTION,
+      },
       relation_alias: 'users',
       relation_type: 'many_to_many',
       target_source_name: 'user',
@@ -176,7 +213,8 @@ export const PermissionSchema = GetTypedCriteriaSchema({
 export type PermissionSchema = typeof PermissionSchema;
 export interface Address extends EntityBase {
   direction: string;
-  user: User;
+  user_uuid: string;
+  user?: User;
 }
 
 export const AddressSchema = GetTypedCriteriaSchema({
@@ -186,6 +224,9 @@ export const AddressSchema = GetTypedCriteriaSchema({
   fields: ['uuid', 'direction', 'user_uuid', 'created_at'],
   relations: [
     {
+      default_options: {
+        select: SelectType.ID_ONLY,
+      },
       relation_alias: 'user',
       relation_type: 'many_to_one',
       target_source_name: 'user',
@@ -317,7 +358,7 @@ export function generateFakeData() {
         bio: `Bio for ${user.username}`,
         preferences:
           index % 2 === 0 ? { theme: 'dark', notifications: 'email' } : null,
-        user: user,
+        user_uuid: user.uuid,
         created_at: generateSequentialCreatedAt(2),
       };
       userProfilesData.push(userProfile);
@@ -332,7 +373,7 @@ export function generateFakeData() {
       const address: Address = {
         uuid: uuidv4(),
         direction: `${(i + 1) * 100} Fake St, City ${index + 1}`,
-        user: user,
+        user_uuid: user.uuid,
         created_at: generateSequentialCreatedAt(5),
       };
       addressesData.push(address);
@@ -400,6 +441,7 @@ export function generateFakeData() {
         i + 1
       }. Authored by ${usersData[publisherIndex]!.username}.`,
       publisher: usersData[publisherIndex]!,
+      user_uuid: usersData[publisherIndex]!.uuid,
       comments: [],
       categories: currentPostCategories,
       created_at: generateSequentialCreatedAt(7),
@@ -441,12 +483,12 @@ export function generateFakeData() {
         comment_text: `Main comment ${i + 1} on "${post.title}" by ${
           usersData[mainCommentUserIndex]!.username
         }.`,
-        post: post,
-        user: usersData[mainCommentUserIndex]!,
+        post_uuid: post.uuid,
+        user_uuid: usersData[mainCommentUserIndex]!.uuid,
         created_at: generateSequentialCreatedAt(3),
       };
       allCommentsData.push(mainComment);
-      post.comments.push(mainComment);
+      post.comments?.push(mainComment);
     }
   });
 
@@ -476,7 +518,7 @@ export function generateFakeData() {
       event_body: {
         post_uuid: postsData[0].uuid,
         title: postsData[0].title,
-        author_uuid: postsData[0].publisher.uuid,
+        author_uuid: postsData[0]?.publisher?.uuid,
         categories: postsData[0].categories,
         status: 'published',
         content_length: postsData[0].body.length,

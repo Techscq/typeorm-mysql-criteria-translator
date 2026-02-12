@@ -23,6 +23,7 @@ import {
   CriteriaFactory,
   FilterOperator,
   type RootCriteria,
+  SelectType,
 } from '@nulledexp/translatable-criteria';
 
 describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
@@ -86,7 +87,9 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
       value: `%${specificPostTitlePart}%`,
     });
 
-    rootCriteria.join('posts', postJoinCriteria);
+    rootCriteria.join('posts', postJoinCriteria, {
+      select: SelectType.FULL_ENTITY,
+    });
 
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,
@@ -139,7 +142,9 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
         value: 'tech',
       });
 
-    rootCriteria.join('posts', postJoinCriteria);
+    rootCriteria.join('posts', postJoinCriteria, {
+      select: SelectType.FULL_ENTITY,
+    });
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,
       UserEntity,
@@ -194,11 +199,11 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
 
     if (targetPost.comments && targetPost.comments.length > 0) {
       expect(fetchedPost.comments).toBeDefined();
-      expect(fetchedPost.comments.length).toBe(targetPost.comments.length);
-      fetchedPost.comments.forEach((comment) => {
+      expect(fetchedPost.comments?.length).toBe(targetPost.comments.length);
+      fetchedPost.comments?.forEach((comment) => {
         expect(comment.uuid).toBeDefined();
         expect(comment.comment_text).toBeDefined();
-        expect(comment.user).toBeUndefined();
+        expect(comment.publisher).toBeUndefined();
       });
     } else {
       expect(fetchedPost.comments).toEqual([]);
@@ -250,7 +255,7 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
       fetchedPost.comments.forEach((comment) => {
         const textNotLikeSpam = !comment.comment_text.includes('spam');
         const userMatchesSpecific =
-          comment.user?.uuid === 'specific-user-uuid-for-test';
+          comment.publisher?.uuid === 'specific-user-uuid-for-test';
         expect(textNotLikeSpam || userMatchesSpecific).toBeTruthy();
       });
     }
@@ -311,7 +316,9 @@ describe('TypeOrmMysqlTranslator - One-to-Many Join Translation', () => {
         value: targetUser.uuid,
       });
 
-    rootCriteria.join('posts', postJoinCriteria);
+    rootCriteria.join('posts', postJoinCriteria, {
+      select: SelectType.FULL_ENTITY,
+    });
 
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,

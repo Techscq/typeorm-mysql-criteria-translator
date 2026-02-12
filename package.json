@@ -1,6 +1,6 @@
 {
   "name": "@nulledexp/typeorm-mysql-criteria-translator",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "TypeORM MySQL translator for @nulledexp/translatable-criteria",
   "keywords": [
     "criteria",
@@ -30,25 +30,25 @@
     "prepublishOnly": "npm run build && npm run test"
   },
   "peerDependencies": {
-    "@nulledexp/translatable-criteria": "^2.0.0",
-    "typeorm": "^0.3.0"
+    "@nulledexp/translatable-criteria": "4.0.0",
+    "typeorm": "0.3.26"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.2",
-    "@changesets/cli": "^2.29.4",
-    "@types/node": "^24.0.0",
+    "@changesets/cli": "^2.29.8",
+    "@types/node": "^25.2.3",
     "@types/uuid": "^10.0.0",
-    "dotenv": "^16.5.0",
-    "madge": "^7.0.0",
-    "mysql2": "^3.14.1",
-    "prettier": "^3.5.3",
-    "rimraf": "^6.0.1",
+    "dotenv": "^17.2.4",
+    "madge": "^8.0.0",
+    "mysql2": "^3.17.0",
+    "prettier": "^3.8.1",
+    "rimraf": "^6.1.2",
     "ts-unused-exports": "^11.0.1",
-    "tsx": "^4.20.1",
-    "typeorm": "^0.3.24",
-    "typescript": "^5.8.3",
-    "uuid": "^11.1.0",
-    "vitest": "^3.2.3"
+    "tsx": "^4.21.0",
+    "typeorm": "0.3.26",
+    "typescript": "^5.9.3",
+    "uuid": "^13.0.0",
+    "vitest": "^4.0.18"
   },
   "files": [
     "dist",

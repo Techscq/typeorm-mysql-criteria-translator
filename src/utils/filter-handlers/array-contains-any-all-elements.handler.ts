@@ -6,9 +6,7 @@ import type { TypeOrmParameterManager } from '../type-orm-parameter-manager.js';
 /**
  * Handles ARRAY_CONTAINS_ANY_ELEMENT, ARRAY_CONTAINS_ALL_ELEMENTS and their NOT counterparts.
  */
-export class ArrayContainsAnyAllElementsHandler
-  implements IFilterOperatorHandler
-{
+export class ArrayContainsAnyAllElementsHandler implements IFilterOperatorHandler {
   /**
    * Constructs a new ArrayContainsAnyAllElementsHandler.
    * @param not True if the operator is a NOT operator, false otherwise.

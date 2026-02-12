@@ -8,19 +8,20 @@ Its main goal is to make joins simple and declarative for the user, while also p
 
 ## 2. How It Works
 
-This component is responsible for two key features of the translator's join system.
+This component is responsible for several key features of the translator's join system.
 
-### 2.1. Declarative, Schema-Based Joins
+### 2.1. Declarative, Schema-Based Joins & Alias Resolution
 
 The core principle is that you **define your relationships once** in the `CriteriaSchema` and then simply refer to them by their alias. The `JoinApplier` handles the rest.
 
 When you make a call like `.join('publisher', ...)`:
 
 1.  The translator provides the `JoinApplier` with the `publisher` relationship details that it found in your schema.
-2.  The `JoinApplier` uses this information (target table, local key, relation key, etc.) to construct the correct `JOIN` clause.
-3.  It also uses the `TypeOrmConditionBuilder` to translate any filters you've defined within the join's `Criteria` into the `ON` condition of the `JOIN`.
+2.  **Alias Resolution:** The `JoinApplier` checks if the requested alias is already in use in the query. If it is (e.g., in a self-join or a complex nested structure), it automatically generates a unique alias (e.g., `publisher_1`) to prevent SQL errors.
+3.  The `JoinApplier` uses this information (target table, local key, relation key, unique alias) to construct the correct `JOIN` clause.
+4.  It also uses the `TypeOrmConditionBuilder` to translate any filters you've defined within the join's `Criteria` into the `ON` condition of the `JOIN`.
 
-This means your business logic stays clean and free of database-specific details.
+This means your business logic stays clean and free of database-specific details and alias management headaches.
 
 ```typescript
 // 1. You define the relation in the schema:
@@ -44,18 +45,28 @@ const criteria = CriteriaFactory.GetCriteria(PostSchema).join(
 );
 ```
 
-### 2.2. Efficient Filtering with `withSelect: false`
+### 2.2. Flexible Selection Strategies (`SelectType`)
 
-The `JoinApplier` also implements a powerful optimization feature. You can decide whether a `JOIN` should be used to fetch data or only to filter the results.
+The `JoinApplier` implements a powerful optimization feature through the `SelectType` option. You can decide exactly how a `JOIN` should behave regarding data retrieval.
 
-- **`join('relation', joinCriteria, true)` (Default):**
+- **`SelectType.FULL_ENTITY` (Default):**
+  - **What it does:** Generates a `... JOIN ...` and adds the joined alias to the `SELECT` clause.
+  - **Result:** The related entity (`relation`) is fully loaded and hydrated in your results. Use this when you need to access the properties of the joined object.
 
-  - **What it does:** Generates a `... JOIN ... SELECT ...`.
-  - **Result:** The related entity (`relation`) is loaded and included in your results. Use this when you need the data from the joined table.
+- **`SelectType.ID_ONLY` (Optimized):**
+  - **What it does:**
+    - **Optimization Check:** It checks if the join can be skipped entirely. This happens ONLY if:
+      1.  We are on the "Owning Side" of the relation (we hold the Foreign Key).
+      2.  There are no filters on the joined entity.
+      3.  There are no nested joins on the joined entity.
+      4.  There is no ordering on the joined entity.
+    - **If Optimized:** It simply selects the local foreign key column (e.g., `post.user_uuid`) and avoids the `JOIN` completely.
+    - **If Not Optimized:** It delegates to TypeORM's `loadAllRelationIds` mechanism to fetch the IDs separately.
+  - **Result:** Only the ID (or array of IDs) of the relation is loaded. This is extremely efficient when you only need the reference ID and not the full object.
 
-- **`join('relation', joinCriteria, false)` (Optimized):**
-  - **What it does:** Generates a simple `... JOIN ...`.
-  - **Result:** The `JOIN` is used to filter the main entity, but its fields are **not** selected. The `relation` property in your results will be `undefined`. This is highly efficient when you only need to check a condition on a related entity.
+- **`SelectType.NO_SELECTION` (Filtering Only):**
+  - **What it does:** Generates the `... JOIN ...` but does **not** add the alias to the `SELECT` clause.
+  - **Result:** The `JOIN` is used purely to filter the main entity based on conditions in the joined table. The `relation` property in your results will be `undefined` (or empty). This avoids the overhead of hydrating objects you don't intend to use.
 
 ```typescript
 // Example: Find all posts published by users named 'admin', but DON'T load the publisher object.
@@ -69,8 +80,8 @@ const publisherFilter = CriteriaFactory.GetInnerJoinCriteria(UserSchema).where({
 const criteria = CriteriaFactory.GetCriteria(PostSchema).join(
   'publisher',
   publisherFilter,
-  false,
-); // withSelect: false
+  { select: SelectType.NO_SELECTION },
+);
 
 // The resulting 'posts' will be filtered correctly,
 // but `post.publisher` will be undefined for each post.

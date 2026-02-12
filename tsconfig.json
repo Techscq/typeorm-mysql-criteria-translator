@@ -26,7 +26,7 @@
     "allowUnusedLabels": false,
     "declaration": true,
     "declarationMap": true,
-    "types": ["vitest/globals"],
+    "types": ["vitest/globals", "node"],
     "lib": ["ES2023"]
   },
   "exclude": [

@@ -71,11 +71,11 @@ describe('TypeOrmMysqlTranslator - Many-to-One Join Translation', () => {
     expect(fetchedPosts.length).toBe(1);
     const fetchedPost = fetchedPosts[0]!;
     expect(fetchedPost.uuid).toBe(targetPostWithPublisher.uuid);
-    expect(fetchedPost.publisher).toBeDefined();
-    expect(fetchedPost.publisher.uuid).toBe(
+    expect(fetchedPost!.publisher).toBeDefined();
+    expect(fetchedPost!.publisher!.uuid).toBe(
       targetPostWithPublisher.publisher.uuid,
     );
-    expect(fetchedPost.publisher.username).toContain(usernamePart);
+    expect(fetchedPost!.publisher!.username).toContain(usernamePart);
   });
 
   it('should translate an INNER JOIN (Post to User/Publisher) with a complex ON condition', async () => {
@@ -134,9 +134,9 @@ describe('TypeOrmMysqlTranslator - Many-to-One Join Translation', () => {
 
     const publisher = fetchedPost.publisher;
     const conditionMet =
-      (publisher.username.includes('user') &&
-        publisher.email.includes('example.com')) ||
-      publisher.username === 'user_2';
+      (publisher?.username.includes('user') &&
+        publisher?.email.includes('example.com')) ||
+      publisher?.username === 'user_2';
     expect(conditionMet).toBeTruthy();
   });
 });

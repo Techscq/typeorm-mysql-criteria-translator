@@ -1,4 +1,4 @@
-import { TypeOrmMysqlTranslator } from '../../type-orm.mysql.translator.js';
+import { TypeOrmMysqlTranslator } from '../../../type-orm.mysql.translator.js';
 import {
   type EntitySchema,
   type ObjectLiteral,
@@ -7,7 +7,7 @@ import {
 import {
   initializeDataSourceService,
   TypeORMUtils,
-} from '../utils/type-orm.utils.js';
+} from '../../utils/type-orm.utils.js';
 import {
   PostSchema as CriteriaPostSchema,
   UserSchema as CriteriaUserSchema,
@@ -15,14 +15,15 @@ import {
   PostCommentSchema,
   type EntityBase,
   type Post,
-} from '../utils/fake-entities.js';
-import { UserEntity } from '../utils/entities/user.entity.js';
+} from '../../utils/fake-entities.js';
+import { UserEntity } from '../../utils/entities/user.entity.js';
 import { beforeEach, describe, expect, it, beforeAll } from 'vitest';
 import {
   CriteriaFactory,
   FilterOperator,
   OrderDirection,
   type RootCriteria,
+  SelectType,
 } from '@nulledexp/translatable-criteria';
 
 describe('TypeOrmMysqlTranslator - Multi-Level Join Translation', () => {
@@ -52,9 +53,9 @@ describe('TypeOrmMysqlTranslator - Multi-Level Join Translation', () => {
 
   beforeAll(async () => {
     const dataSource = await initializeDataSourceService(false);
-    actualUsersFromDB = await dataSource
-      .getRepository(UserEntity)
-      .find({ relations: ['posts', 'posts.comments', 'posts.comments.user'] });
+    actualUsersFromDB = await dataSource.getRepository(UserEntity).find({
+      relations: ['posts', 'posts.comments', 'posts.comments.publisher'],
+    });
   });
 
   beforeEach(() => {
@@ -97,7 +98,9 @@ describe('TypeOrmMysqlTranslator - Multi-Level Join Translation', () => {
       })
       .join('comments', commentJoinCriteria);
 
-    rootCriteria.join('posts', postJoinCriteria);
+    rootCriteria.join('posts', postJoinCriteria, {
+      select: SelectType.FULL_ENTITY,
+    });
 
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,
@@ -151,7 +154,9 @@ describe('TypeOrmMysqlTranslator - Multi-Level Join Translation', () => {
       .setSelect(['title'])
       .join('comments', commentJoinCriteria);
 
-    rootCriteria.join('posts', postJoinCriteria);
+    rootCriteria.join('posts', postJoinCriteria, {
+      select: SelectType.FULL_ENTITY,
+    });
 
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,
@@ -207,7 +212,9 @@ describe('TypeOrmMysqlTranslator - Multi-Level Join Translation', () => {
 
     postJoinCriteria.join('comments', commentJoinCriteria);
 
-    rootCriteria.join('posts', postJoinCriteria);
+    rootCriteria.join('posts', postJoinCriteria, {
+      select: SelectType.FULL_ENTITY,
+    });
 
     const fetchedUsers = await translateAndFetch<User>(
       rootCriteria,

@@ -15,6 +15,7 @@ import {
   CriteriaFactory,
   FilterOperator,
   type RootCriteria,
+  SelectType,
 } from '@nulledexp/translatable-criteria';
 import {
   initializeDataSourceService,
@@ -131,7 +132,7 @@ describe('TypeOrmMysqlTranslator - Basic One-to-One Joins', () => {
         operator: FilterOperator.EQUALS,
         value: targetUserProfileWithUser.uuid,
       })
-      .join('user', userJoinCriteria);
+      .join('user', userJoinCriteria, { select: SelectType.FULL_ENTITY });
 
     const fetchedProfile = await translateAndFetch<UserProfile>(
       rootCriteria,

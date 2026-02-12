@@ -13,6 +13,7 @@ export const PostEntity = new EntitySchema<Post>({
     title: { type: 'varchar', length: '400' },
     metadata: { type: 'json', nullable: true },
     categories: { type: 'simple-array', nullable: true },
+    user_uuid: { type: 'uuid' },
   },
   relations: {
     publisher: {

@@ -16,6 +16,7 @@ import {
 import {
   CriteriaFactory,
   FilterOperator,
+  SelectType,
 } from '@nulledexp/translatable-criteria';
 
 describe('TypeOrmMysqlTranslator - Many-to-Many Relationships', () => {
@@ -117,6 +118,7 @@ describe('TypeOrmMysqlTranslator - Many-to-Many Relationships', () => {
           operator: FilterOperator.EQUALS,
           value: expectedUserFromJoin.username,
         }),
+        { select: SelectType.FULL_ENTITY },
       );
 
     const qb = await TypeORMUtils.getQueryBuilderFor<Permission>(

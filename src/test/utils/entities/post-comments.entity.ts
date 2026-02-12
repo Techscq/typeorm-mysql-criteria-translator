@@ -9,9 +9,11 @@ export const PostCommentEntity = new EntitySchema<Comment>({
   columns: {
     ...BaseColumnSchemaPart,
     comment_text: { type: 'varchar', length: '400' },
+    user_uuid: { type: 'uuid' },
+    post_uuid: { type: 'uuid' },
   },
   relations: {
-    user: {
+    publisher: {
       type: 'many-to-one',
       target: 'User',
       joinColumn: { name: 'user_uuid', referencedColumnName: 'uuid' },

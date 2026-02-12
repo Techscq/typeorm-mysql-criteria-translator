@@ -2,7 +2,6 @@ import { Brackets, type ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import {
   CriteriaTranslator,
   type CriteriaSchema,
-  type JoinRelationType,
   type RootCriteria,
   FilterOperator,
   LogicalOperator,
@@ -13,6 +12,7 @@ import {
   type PivotJoin,
   type SimpleJoin,
   InnerJoinCriteria,
+  SelectType,
 } from '@nulledexp/translatable-criteria';
 import {
   TypeOrmFilterFragmentBuilder,
@@ -25,9 +25,8 @@ import { QueryApplier } from './utils/query-applier.js';
 import { TypeOrmParameterManager } from './utils/type-orm-parameter-manager.js';
 
 /**
- * TypeOrmMysqlTranslator translates a Criteria object into a TypeORM SelectQueryBuilder
- * for MySQL databases. It orchestrates the process of building the SQL query
- * by delegating responsibilities to specialized helper classes.
+ * Translates a Criteria object into a TypeORM SelectQueryBuilder for MySQL.
+ * Orchestrates query building by delegating to specialized helpers.
  */
 export class TypeOrmMysqlTranslator<
   T extends ObjectLiteral,
@@ -43,10 +42,6 @@ export class TypeOrmMysqlTranslator<
   private _queryState: QueryState;
   private _queryApplier: QueryApplier<T>;
 
-  /**
-   * Constructs a new TypeOrmMysqlTranslator instance.
-   * Initializes all necessary helper classes for query translation.
-   */
   constructor() {
     super();
     this._parameterManager = new TypeOrmParameterManager();
@@ -69,11 +64,10 @@ export class TypeOrmMysqlTranslator<
   }
 
   /**
-   * Translates a RootCriteria object into a TypeORM SelectQueryBuilder.
-   * This is the main entry point for the translation process.
-   * @param criteria The RootCriteria object to translate.
-   * @param source The initial TypeORM SelectQueryBuilder.
-   * @returns The modified SelectQueryBuilder with the translated criteria applied.
+   * Main entry point. Translates RootCriteria into a TypeORM SelectQueryBuilder.
+   * @param criteria The RootCriteria to translate.
+   * @param source The initial SelectQueryBuilder.
+   * @returns The modified SelectQueryBuilder.
    */
   public override translate<RootCriteriaSchema extends CriteriaSchema>(
     criteria: RootCriteria<RootCriteriaSchema>,
@@ -98,6 +92,7 @@ export class TypeOrmMysqlTranslator<
     }
 
     this._queryApplier.applyCursors(source);
+    this.applyRelationIdLoading(criteria, source);
     this._queryApplier.applyOrderBy(source);
     this._queryApplier.applySelects(source);
 
@@ -105,10 +100,45 @@ export class TypeOrmMysqlTranslator<
   }
 
   /**
-   * Visits a Filter expression and builds its corresponding TypeORM condition fragment.
-   * @param filter The Filter object to visit.
-   * @param currentAlias The alias of the entity the filter applies to.
-   * @returns A TypeOrmConditionFragment representing the filter's SQL.
+   * Loads relation IDs for joins configured with SelectType.ID_ONLY.
+   */
+  private applyRelationIdLoading(
+    criteria: RootCriteria<any>,
+    qb: SelectQueryBuilder<T>,
+  ) {
+    const relationsToLoad: string[] = [];
+    this.collectRelationIds(criteria, '', relationsToLoad);
+
+    if (relationsToLoad.length > 0) {
+      qb.loadAllRelationIds({
+        relations: relationsToLoad,
+      });
+    }
+  }
+
+  private collectRelationIds(
+    criteria:
+      | RootCriteria<any>
+      | InnerJoinCriteria<any>
+      | LeftJoinCriteria<any>,
+    pathPrefix: string,
+    collector: string[],
+  ) {
+    for (const joinDetail of criteria.joins) {
+      const currentPath = pathPrefix
+        ? `${pathPrefix}.${joinDetail.parameters.relation_alias}`
+        : joinDetail.parameters.relation_alias;
+
+      if (joinDetail.parameters.join_options?.select === SelectType.ID_ONLY) {
+        collector.push(currentPath);
+      }
+
+      this.collectRelationIds(joinDetail.criteria, currentPath, collector);
+    }
+  }
+
+  /**
+   * Builds a TypeORM condition fragment from a Filter expression.
    */
   public visitFilter<FieldType extends string, Operator extends FilterOperator>(
     filter: Filter<FieldType, Operator>,
@@ -118,9 +148,7 @@ export class TypeOrmMysqlTranslator<
   }
 
   /**
-   * Visits the root criteria and applies its filter group to the query builder.
-   * @param criteria The RootCriteria object to visit.
-   * @param qb The TypeORM SelectQueryBuilder.
+   * Applies the root filter group to the query builder.
    */
   public visitRoot<RootCriteriaSchema extends CriteriaSchema>(
     criteria: RootCriteria<RootCriteriaSchema>,
@@ -142,10 +170,7 @@ export class TypeOrmMysqlTranslator<
   }
 
   /**
-   * Visits an AND logical group and processes its items.
-   * @param group The FilterGroup representing an AND group.
-   * @param currentAlias The alias of the entity the group applies to.
-   * @param qb The TypeORM SelectQueryBuilder.
+   * Processes an AND logical group.
    */
   public visitAndGroup<FieldType extends string>(
     group: FilterGroup<FieldType>,
@@ -162,10 +187,7 @@ export class TypeOrmMysqlTranslator<
   }
 
   /**
-   * Visits an OR logical group and processes its items.
-   * @param group The FilterGroup representing an OR group.
-   * @param currentAlias The alias of the entity the group applies to.
-   * @param qb The TypeORM SelectQueryBuilder.
+   * Processes an OR logical group.
    */
   public visitOrGroup<FieldType extends string>(
     group: FilterGroup<FieldType>,
@@ -182,10 +204,7 @@ export class TypeOrmMysqlTranslator<
   }
 
   /**
-   * Visits an InnerJoinCriteria and applies the inner join logic to the query builder.
-   * @param criteria The InnerJoinCriteria object to visit.
-   * @param parameters Join parameters.
-   * @param qb The TypeORM SelectQueryBuilder.
+   * Applies inner join logic.
    */
   public visitInnerJoin<
     ParentCSchema extends CriteriaSchema,
@@ -193,21 +212,15 @@ export class TypeOrmMysqlTranslator<
   >(
     criteria: InnerJoinCriteria<JoinCriteriaSchema>,
     parameters:
-      | PivotJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>
-      | SimpleJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>,
+      | PivotJoin<ParentCSchema, JoinCriteriaSchema>
+      | SimpleJoin<ParentCSchema, JoinCriteriaSchema>,
     qb: SelectQueryBuilder<T>,
   ) {
-    this._joinApplier.applyJoinLogic(qb, 'inner', criteria, parameters);
-    for (const joinDetail of criteria.joins) {
-      joinDetail.criteria.accept(this, joinDetail.parameters, qb);
-    }
+    this.applyJoinAndVisitChildren('inner', criteria, parameters, qb);
   }
 
   /**
-   * Visits a LeftJoinCriteria and applies the left join logic to the query builder.
-   * @param criteria The LeftJoinCriteria object to visit.
-   * @param parameters Join parameters.
-   * @param qb The TypeORM SelectQueryBuilder.
+   * Applies left join logic.
    */
   public visitLeftJoin<
     ParentCSchema extends CriteriaSchema,
@@ -215,22 +228,46 @@ export class TypeOrmMysqlTranslator<
   >(
     criteria: LeftJoinCriteria<JoinCriteriaSchema>,
     parameters:
-      | PivotJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>
-      | SimpleJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>,
+      | PivotJoin<ParentCSchema, JoinCriteriaSchema>
+      | SimpleJoin<ParentCSchema, JoinCriteriaSchema>,
     qb: SelectQueryBuilder<T>,
   ) {
-    this._joinApplier.applyJoinLogic(qb, 'left', criteria, parameters);
+    this.applyJoinAndVisitChildren('left', criteria, parameters, qb);
+  }
+
+  /**
+   * Applies join logic and recursively visits child joins.
+   */
+  private applyJoinAndVisitChildren<
+    ParentCSchema extends CriteriaSchema,
+    JoinCriteriaSchema extends CriteriaSchema,
+  >(
+    joinType: 'inner' | 'left',
+    criteria:
+      | InnerJoinCriteria<JoinCriteriaSchema>
+      | LeftJoinCriteria<JoinCriteriaSchema>,
+    parameters:
+      | PivotJoin<ParentCSchema, JoinCriteriaSchema>
+      | SimpleJoin<ParentCSchema, JoinCriteriaSchema>,
+    qb: SelectQueryBuilder<T>,
+  ) {
+    const { usedAlias } = this._joinApplier.applyJoinLogic(
+      qb,
+      joinType,
+      criteria,
+      parameters,
+    );
     for (const joinDetail of criteria.joins) {
-      joinDetail.criteria.accept(this, joinDetail.parameters, qb);
+      joinDetail.criteria.accept(
+        this,
+        { ...joinDetail.parameters, parent_alias: usedAlias },
+        qb,
+      );
     }
   }
 
   /**
-   * Visits an OuterJoinCriteria.
-   * @param _criteria The OuterJoinCriteria object to visit.
-   * @param _parameters Join parameters.
-   * @param _context The TypeORM SelectQueryBuilder.
-   * @throws Error as FULL OUTER JOIN is not generically implemented for MySQL.
+   * Throws error for OuterJoin (not implemented).
    */
   public visitOuterJoin<
     ParentCSchema extends CriteriaSchema,
@@ -238,8 +275,8 @@ export class TypeOrmMysqlTranslator<
   >(
     _criteria: OuterJoinCriteria<JoinCriteriaSchema>,
     _parameters:
-      | PivotJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>
-      | SimpleJoin<ParentCSchema, JoinCriteriaSchema, JoinRelationType>,
+      | PivotJoin<ParentCSchema, JoinCriteriaSchema>
+      | SimpleJoin<ParentCSchema, JoinCriteriaSchema>,
     _context: SelectQueryBuilder<T>,
   ): SelectQueryBuilder<T> {
     throw new Error(

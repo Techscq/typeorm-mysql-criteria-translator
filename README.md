@@ -9,9 +9,12 @@ It allows you to define complex query logic abstractly and reusably, and then ap
 
 ## Key Features
 
-- **Declarative, Schema-Based Joins:** Define your entity relationships once in the `CriteriaSchema`. The translator handles the rest, making your queries cleaner, safer, and more reusable.
-- **Efficient Filtering-Only Joins:** Use `withSelect: false` on your joins to filter by a related entity without the performance overhead of selecting and hydrating its data.
-- **Complete Criteria Translation:** Converts filters, logical groups (AND/OR), ordering, pagination (offset and cursor), and field selection into efficient SQL.
+- **Declarative, Schema-Based Joins:** Define your entity relationships once in the `CriteriaSchema`. The translator handles the rest, making your queries cleaner, safer, and more reusable. Includes automatic alias collision resolution.
+- **Flexible Selection Strategies:** Control exactly what data is fetched with `SelectType`.
+  - `FULL_ENTITY`: Selects and hydrates the full joined entity (default).
+  - `ID_ONLY`: Optimizes performance by loading only the relation IDs (Foreign Keys), avoiding unnecessary joins when possible.
+  - `NO_SELECTION`: Uses the joined entity for filtering purposes only, without selecting any of its fields.
+- **Complete Criteria Translation:** Converts filters, logical groups (AND/OR), ordering, pagination (offset, limit, and cursor), and field selection into efficient SQL.
 - **Rich Filter Operator Support:** Includes a wide range of operators for text, numbers, collections, `NULL`s, and advanced `JSON` and `SET` types in MySQL.
 - **Seamless TypeORM Integration:** Produces a standard TypeORM `SelectQueryBuilder` that you can execute directly or modify further.
 
@@ -72,6 +75,7 @@ import {
   CriteriaFactory,
   FilterOperator,
   OrderDirection,
+  SelectType,
 } from '@nulledexp/translatable-criteria';
 import { PostSchema } from './schemas/post.schema';
 import { UserSchema } from './schemas/user.schema';
@@ -91,7 +95,7 @@ const publisherJoinCriteria = CriteriaFactory.GetInnerJoinCriteria(UserSchema)
 
 // Root criteria: find posts, join with our publisher criteria, and order them
 const criteria = CriteriaFactory.GetCriteria(PostSchema)
-  .join('publisher', publisherJoinCriteria) // Simple, declarative join!
+  .join('publisher', publisherJoinCriteria, { select: SelectType.FULL_ENTITY }) // Explicitly select full entity
   .orderBy('created_at', OrderDirection.DESC)
   .setTake(20);
 ```
@@ -130,11 +134,15 @@ posts.forEach((post) => {
 
 This translator uses the **Visitor pattern** to walk through your `Criteria` object. It intelligently delegates the task of building each part of the SQL query to specialized, single-responsibility components.
 
-- **`TypeOrmMysqlTranslator`**: The main orchestrator. It traverses the `Criteria` and coordinates the other components.
-- **`TypeOrmJoinApplier`**: The expert for `JOIN`s. It reads the relation definitions from your schema and applies the correct `INNER` or `LEFT` join, including support for `withSelect: false`.
+- **`TypeOrmMysqlTranslator`**: The main orchestrator. It traverses the `Criteria` and coordinates the other components. It also directly applies `take` and `skip` (offset/limit) pagination.
+- **`TypeOrmJoinApplier`**: The expert for `JOIN`s. It reads the relation definitions from your schema, applies the correct `INNER` or `LEFT` join, and handles automatic alias collision resolution. It manages the `SelectType` logic:
+  - **`FULL_ENTITY`**: Adds the alias to the selection.
+  - **`ID_ONLY`**: Optimizes by selecting only the foreign key column locally if possible (Owning Side, no filters, no ordering, no nested joins), or delegates to TypeORM's `loadAllRelationIds` for other cases.
+  - **`NO_SELECTION`**: Applies the join for filtering but does not select any fields.
 - **`TypeOrmConditionBuilder`**: The logic master. It builds the `WHERE` clause for the main query and the `ON` conditions for joins, correctly handling nested `AND`/`OR` groups with parentheses (`Brackets`).
 - **`TypeOrmFilterFragmentBuilder`**: The operator specialist. It knows how to translate each specific `FilterOperator` (like `EQUALS`, `CONTAINS`, `JSON_CONTAINS`) into its corresponding MySQL syntax.
 - **`TypeOrmParameterManager`**: The security guard. It ensures all values are parameterized, preventing SQL injection.
+- **`QueryState` & `QueryApplier`**: These manage the state of the query as it's being built (e.g., collecting all `SELECT` and `ORDER BY` clauses). `QueryApplier` is specifically responsible for applying cursor-based pagination, collected `ORDER BY` clauses, and `SELECT` fields to the `QueryBuilder`.
 
 ## Limitations
 

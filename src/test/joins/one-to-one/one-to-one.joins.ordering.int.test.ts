@@ -20,6 +20,7 @@ import {
   FilterOperator,
   OrderDirection,
   type RootCriteria,
+  SelectType,
 } from '@nulledexp/translatable-criteria';
 import {
   initializeDataSourceService,
@@ -609,7 +610,7 @@ describe('TypeOrmMysqlTranslator - Ordering with One-to-One Joins', () => {
     const criteria = CriteriaFactory.GetCriteria(CriteriaUserSchema)
       .setSelect(['email'])
       .orderBy('username', OrderDirection.ASC)
-      .join('posts', postsJoinCriteria);
+      .join('posts', postsJoinCriteria, { select: SelectType.FULL_ENTITY });
 
     const qb = await TypeORMUtils.getQueryBuilderFor<User>(
       UserEntity,
@@ -627,7 +628,6 @@ describe('TypeOrmMysqlTranslator - Ordering with One-to-One Joins', () => {
       expect(fetchedUser.username).toBe(expectedUser.username);
       expect(fetchedUser.uuid).toBe(expectedUser.uuid);
       expect(fetchedUser.created_at).toBeUndefined();
-
       expect(fetchedUser.posts).toBeDefined();
       expect(fetchedUser.posts.length).toBeGreaterThan(0);
       expect(fetchedUser.posts.length).toBe(expectedUser.posts.length);

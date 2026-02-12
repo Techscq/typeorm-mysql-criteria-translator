@@ -12,6 +12,9 @@ export const AddressEntity = new EntitySchema<Address>({
       type: 'varchar',
       length: 400,
     },
+    user_uuid: {
+      type: 'uuid',
+    },
   },
   relations: {
     user: {

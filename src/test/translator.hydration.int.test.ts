@@ -10,6 +10,7 @@ import {
   FilterOperator,
   OrderDirection,
   type RootCriteria,
+  SelectType,
 } from '@nulledexp/translatable-criteria';
 import {
   initializeDataSourceService,
@@ -52,7 +53,7 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
       .find({ relations: ['posts', 'permissions', 'addresses'] });
     actualPostsFromDB = await dataSource
       .getRepository(PostEntity)
-      .find({ relations: ['publisher', 'comments', 'comments.user'] });
+      .find({ relations: ['publisher', 'comments', 'comments.publisher'] });
   });
 
   beforeEach(() => {
@@ -328,7 +329,7 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
         targetPostWithCommentsFromDB.comments.length,
       );
       targetPostWithCommentsFromDB.comments.forEach((dbComment) => {
-        const fetchedComment = fetchedPost!.comments.find(
+        const fetchedComment = fetchedPost!.comments?.find(
           (c: Comment) => c.uuid === dbComment.uuid,
         );
         expect(
@@ -355,7 +356,7 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
 
     await expect(qb.getOneOrFail()).rejects.toThrow(EntityNotFoundError);
   });
-  it('should filter by a joined entity without selecting its fields (withSelect: false)', async () => {
+  it('should filter by a joined entity without selecting its fields (SelectType.NO_SELECTION)', async () => {
     const targetPublisherUsername = 'user_1';
     const targetPublisher = actualUsersFromDB.find(
       (u) => u.username === targetPublisherUsername,
@@ -383,7 +384,7 @@ describe('TypeOrmMysqlTranslator - Data Hydration (getMany/getOne)', () => {
         operator: FilterOperator.EQUALS,
         value: targetPublisherUsername,
       }),
-      false,
+      { select: SelectType.NO_SELECTION },
     );
 
     const qb = await translateAndGetQueryBuilder<Post>(criteria, PostEntity);

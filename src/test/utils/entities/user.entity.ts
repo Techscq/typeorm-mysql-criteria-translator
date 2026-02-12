@@ -17,7 +17,6 @@ export const UserEntity = new EntitySchema<User>({
       length: 60,
     },
   },
-
   relations: {
     addresses: {
       inverseSide: 'user',

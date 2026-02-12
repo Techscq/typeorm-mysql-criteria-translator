@@ -14,7 +14,7 @@ The translator follows a clear, step-by-step process to build your query, ensuri
 
 To keep the logic clean and maintainable, the translator doesn't do all the work itself. It relies on a team of helpers, each with a single responsibility:
 
-- **`TypeOrmJoinApplier`**: The expert for `JOIN`s. It reads the relationship definitions from your schema and applies the correct `INNER` or `LEFT` join.
+- **`TypeOrmJoinApplier`**: The expert for `JOIN`s. It reads the relationship definitions from your schema, applies the correct `INNER` or `LEFT` join, and resolves alias collisions.
 - **`TypeOrmConditionBuilder`**: The logic master. It builds the `WHERE` clause for the main query and the `ON` conditions for joins, correctly handling nested `AND`/`OR` groups.
 - **`TypeOrmFilterFragmentBuilder`**: The operator specialist. It knows how to translate each specific `FilterOperator` (like `EQUALS`, `CONTAINS`, `JSON_CONTAINS`) into its corresponding MySQL syntax.
 - **`TypeOrmParameterManager`**: The security guard. It ensures all filter values are parameterized to prevent SQL injection.
@@ -24,22 +24,25 @@ To keep the logic clean and maintainable, the translator doesn't do all the work
 
 When you call `translator.translate(criteria, qb)`, the following happens:
 
-1.  **State Reset**: The translator prepares for a new query by resetting its internal state. This ensures that each translation is independent.
-2.  **Visit the Criteria**: It begins "visiting" the `Criteria` object, starting from the root.
-3.  **Apply Filters**: It processes the main `WHERE` conditions, using the `TypeOrmConditionBuilder` to correctly handle `AND`/`OR` logic with parentheses.
-4.  **Apply Joins**: It iterates through each `.join()` in your `Criteria`. For each one:
-    - It finds the corresponding relationship definition in your `CriteriaSchema`.
-    - It passes all the necessary information (join keys, aliases) to the `TypeOrmJoinApplier`.
-    - The `JoinApplier` then adds the `JOIN` and any `ON` conditions to the query.
-5.  **Collect Everything Else**: As it traverses the `Criteria`, it collects all `orderBy`, `select`, `take`, `skip`, and `cursor` definitions.
-6.  **Finalize the Query**: Once the entire `Criteria` has been visited, the `QueryApplier` applies the collected `SELECT` fields, `ORDER BY` clauses, and pagination (`take`/`skip` or cursor conditions) to the `QueryBuilder`.
+1.  **State Reset**: The translator prepares for a new query by resetting its internal state.
+2.  **Initial Collection**: It collects root-level `select`, `orderBy`, `take`, and `skip` definitions. `take` and `skip` are applied directly to the `QueryBuilder` at this stage.
+3.  **Visit the Criteria**: It begins "visiting" the `Criteria` object, starting from the root.
+4.  **Apply Root Filters**: It processes the main `WHERE` conditions, using the `TypeOrmConditionBuilder`.
+5.  **Apply Joins Recursively**: It iterates through each `.join()` in your `Criteria`. For each one:
+    - It passes the relationship details to the `TypeOrmJoinApplier`.
+    - The `JoinApplier` adds the `JOIN` and resolves any potential alias collisions, returning the unique alias it used (e.g., `publisher_1`).
+    - The translator then recursively calls the translation process for any nested joins, passing down the unique alias to ensure correct parent-child linking.
+6.  **Finalize the Query**: Once the entire `Criteria` has been visited, the `QueryApplier` is called to:
+    - Apply cursor-based pagination conditions (`applyCursors`).
+    - Apply all collected `ORDER BY` clauses (`applyOrderBy`).
+    - Apply all collected `SELECT` fields (`applySelects`).
 7.  **Return**: The fully configured `SelectQueryBuilder` is returned, ready for you to execute.
 
 ## 3. Key Features and Usage Notes
 
-### 3.1. Declarative Joins
+### 3.1. Declarative Joins & Alias Management
 
-The translator relies on the `relations` you define in your `CriteriaSchema`. This means you no longer need to specify join keys (`local_field`, `relation_field`) in your business logic. The translator handles this automatically, making your code cleaner and less error-prone.
+The translator relies on the `relations` you define in your `CriteriaSchema`. This makes your code cleaner and less error-prone. It also automatically handles alias collisions in complex, multi-level joins, so you don't have to worry about TypeORM throwing "alias already in use" errors.
 
 ```typescript
 // In your Schema:
@@ -52,6 +55,10 @@ const PostSchema = GetTypedCriteriaSchema({
       target_source_name: 'user',
       local_field: 'user_uuid',
       relation_field: 'uuid',
+      // Optional: Define default selection behavior for this relation
+      default_options: {
+        select: SelectType.FULL_ENTITY,
+      },
     },
   ],
 });
@@ -62,14 +69,15 @@ const criteria = CriteriaFactory.GetCriteria(PostSchema)
   .join('publisher', publisherJoinCriteria);
 ```
 
-### 3.2. Efficient Filtering with `withSelect: false`
+### 3.2. Flexible Selection Strategies (`SelectType`)
 
-A key feature is the ability to join a table for filtering purposes only, without the performance cost of selecting its data.
+A key feature is the ability to control exactly what data is fetched when joining tables. This can be configured globally in the schema (via `default_options`) or overridden per query.
 
-- **`join('publisher', joinCriteria, true)` (or omitting the last argument):** This is the default behavior. It generates an `INNER JOIN ... SELECT ...` and hydrates the `publisher` property on your results.
-- **`join('publisher', joinCriteria, false)`:** This is the optimized version. It generates a simple `INNER JOIN` and uses it for the `WHERE`/`ON` clause, but does **not** select the publisher's fields. The `publisher` property on your results will be `undefined`.
+- **`SelectType.FULL_ENTITY` (Default):** Generates an `INNER JOIN ... SELECT ...` and hydrates the full entity on your results.
+- **`SelectType.ID_ONLY`:** Optimizes the query by only loading the relation's ID (Foreign Key). If possible (Owning Side, no filters, no ordering, no nested joins), it avoids the join entirely. Otherwise, it uses TypeORM's `loadAllRelationIds`.
+- **`SelectType.NO_SELECTION`:** Generates a simple `INNER JOIN` for filtering purposes but does **not** select the joined entity's fields. The property on your results will be `undefined`.
 
-This is extremely useful for queries where you need to check a condition on a related entity but don't need to return its data.
+This is extremely useful for optimizing performance, especially when you only need to check a condition on a related entity or just need its ID.
 
 ### 3.3. `OuterJoin` (Limitation)
 
